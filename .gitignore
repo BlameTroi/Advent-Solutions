@@ -1,0 +1,13 @@
+# executable artifacts
+unittest
+solutionone
+solutiontwo
+solution
+driver
+*.dSYM/
+a.out
+keep.*
+*.bak
+# in go a mod file matters, but in fortran it's a compile and link artifact
+*.mod
+*.orig
