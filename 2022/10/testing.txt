@@ -1,0 +1,17 @@
+./solution /Users/troi/projects/aoc/datasets/2022/10/testtwo.txt
+ aoc dataset '/Users/troi/projects/aoc/datasets/2022/10/testtwo.txt' opened for reading
+
+ screen:
+ 
+ ##..##..##..##..##..##..##..##..##..##..
+ ###...###...###...###...###...###...###.
+ ####....####....####....####....####....
+ #####.....#####.....#####.....#####.....
+ ######......######......######......###.
+ #######.......#######.......#######.....
+
+
+                13140 part one
+                    0 part two
+
+ aoc dataset closed

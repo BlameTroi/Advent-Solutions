@@ -1,0 +1,42 @@
+./solution /Users/troi/projects/aoc/datasets/2022/15/dataset.txt
+ aoc dataset '/Users/troi/projects/aoc/datasets/2022/15/dataset.txt' opened for reading
+ 
+ sorting ranges...
+
+ collapsing ranges...
+
+ merging ranges...
+
+ minimum and maximum are:
+       -208427       4374240
+
+for a maximum of 4582667
+
+checking line 0
+checking line 1
+checking line 2
+checking line 3
+checking line 4
+checking line 5
+checking line 6
+checking line 7
+checking line 8
+checking line 9
+checking line 10
+checking line 11
+checking line 12
+checking line 13
+checking line 14
+checking line 15
+checking line 16
+checking line 17
+checking line 18
+checking line 19
+checking line 20
+ point can't be seen! ( 2740279, 2625406)
+ answer:        10961118625406
+
+              4582667 part one
+       10961118625406 part two
+
+ aoc dataset closed

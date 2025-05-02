@@ -1,0 +1,7 @@
+./solution /Users/troi/projects/aoc/datasets/2022/12/dataset.txt
+ aoc dataset '/Users/troi/projects/aoc/datasets/2022/12/dataset.txt' opened for reading
+
+                  370 part one
+                  363 part two
+
+ aoc dataset closed

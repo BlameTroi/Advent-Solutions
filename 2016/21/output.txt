@@ -1,0 +1,6 @@
+make: Nothing to be done for `all'.
+./driver /Users/troi/projects/aoc/datasets/2016/21/dataset.txt
+abcdefgh
+part one: bgfacdeh
+fbgdceah
+part two: bdgheacf
