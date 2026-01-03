@@ -1,4 +1,4 @@
-\ 2025/01/part1.fth -- Secret Entrance -- T.Brumley.
+\ solution.fs -- AoC 2025 01 Secret Entrance -- T.Brumley.
 
 \ Input and output support.
 \
@@ -137,4 +137,4 @@ variable full-turn
    \ close-input throw
    cr ." done" ;
 
-\ End of 2025/01/part1.fth
+\ End of solution.fs
