@@ -1,145 +1,140 @@
 \ 2025/01/part1.fth -- Secret Entrance -- T.Brumley.
 
-   MARKER AOC250101
-
-\ Input format is a single letter direction (L or R) and an
-\ integer of arbitrry length for clicks to move.
+\ Input and output support.
 \
-
-\ Moves for part one are R = + digits, L = - digits, abs,
-\ mod 100
-
-\ The problem statement:
-\ 
-\ Get a password from a safe by counting the number of times
-\ the dial stops on 0 when following the directions in the
-\ data file.
-\ 
-\ Data file format is [LR]d+
+\ Input and output are text files, but in this problem we only
+\ open input. Each line is read into a fixed buffer. Clients
+\ can expect this buffer to be unchanged until the next read.
 \
-\ If L then the value of the d+ field is negative.
-\
-\ The safe dial is set at 50 to start, turn the dial the
-\ specified number of "clicks" in the direction given. The
-\ dial goes from 0 to 99 inclusive.
-\ 
-\ So      Dial           Move          New Dial
-\           50            L68                82
-\           82            L30                52
-\           52            R48                 0 <-- count
-
-\ Input and output support. This problem only requires input
-\ but I'll be building up some reusable definitions as I go
-\ through the exercise.
+\ The buffer size is arbitrary, but we must allot two additional
+\ bytes for end of line handling. After a line is read the
+\ fields line-length and line-buffer are set. They should be
+\ considered read only by client code.
 
 0 VALUE fd-in
 0 VALUE fd-out
 
-\ A buffer to hold the data line, variable length lines
-\ delimited by newlines. The 80 "max" is arbitrary. The
-\ additional two bytes are for a possible crlf if someone
-\ runs this on a DOS format file.
-
+0 value line-length
 80 CONSTANT line-max
 CREATE line-buffer line-max 2 + ALLOT
 
-: open-input ( addr u -- , s" filename" on stack )
-   r/o open-file
-   throw
-   to fd-in ;
+: open-input ( s" filename" -- )
+   0 to line-length
+   r/o open-file throw to fd-in ;
 
 : close-input ( -- )
-   fd-in close-file throw ;
-   
-\ Read a line of input. Read-line returns the length read,
-\ an eof flag, and the io result. The throw consumes the
-\ ior, and we return the length and eof flag.
+   fd-in close-file throw
+   0 to fd-in ;
 
-: read-input ( -- u f )
-      line-buffer line-max blank
-      line-buffer line-max fd-in read-line throw ;
+: open-output ( s" filename" -- )
+   w/o open-file throw to fd-out ;
 
-: open-output ( addr u -- )
-   w/o open-file
-   throw
-   to fd-out ;
+: close-output ( s" filename" - )
+   fd-out close-file throw
+   0 to fd-out ;
+
+\ Read a line of input. Read-line returns the length read,an eof
+\ flag, and the io result. The throw consumes the ior. Save the
+\ length with the buffer and return the eof flag.
+
+: read-input ( -- f )
+   line-buffer line-max 2dup
+   0 fill                         \ prevent seeing prior line
+   fd-in read-line                \ u f ior
+   throw swap to line-length ;    \ eof?
+
+: write-output ( c-addr u -- ior )
+   type cr 0 ; \ stubb
+
+\ Parsing: The data file is one or more lines of the format
+\ ^[LR]d+$
+
+: get.direction ( -- +/-1 )
+   line-buffer c@ 'L' = if -1 else 1 then ;
+
+: get.clicks ( -- n )
+      line-buffer 1+    \ c-addr
+      line-length 1-    \ u
+      0 0 2swap         \ ud c-addr u
+      >number           \ d c-addr u
+      2drop drop ;      \ n
 
 \ Problem state. There is no need yet to store either the
 \ raw or parsed input. For now each spin instruction will
 \ execute as it is read.
 
-VARIABLE dial
-VARIABLE spins
-VARIABLE zeros
-VARIABLE len
-VARIABLE reporting
-VARIABLE sgn
+\ The safe's dial and event count.
+VARIABLE dial                 \ current position
+VARIABLE zeros                \ times at zero
+variable next-dial
+VARIABLE direction
+VARIABLE clicks
+variable net.turn
+variable full.turn
+VARIABLE net.turn
 
-\ Pretty straight forward IPO loop. Any error other than
-\ EOF will throw an error (non-0 IOR).
+\ Part One:
+\
+\ Follow the directions (turn the knob) to determine a password.
+\ The safe dial ranges [0-99] and its starting position if 50.
+\ Count the number of times the dial sits at 0 after a spin.
+\ 
+\ So      Dial           Move          New Dial
+\           50            L68                82
+\           50 -68 + -18 100 + 82
+\           82            L30                52
+\           82 30 - 52
+\           52            R48                 0 <-- counts as 1
 
-: do-part-1 ( -- )
-   50 dial !
-   0 spins !
-   0 zeros !
-   0 len !
-   0 sgn !
-   
-   begin
+: debug-tracer
+   ." Dial " dial @ 4 .r
+   ."  Direction" direction @ 4 .r
+   ."  Clicks" clicks @ 4 .r
+   ."  net.turn" net.turn @ 4 .r
+   ."  Next" next-dial @ 4 .r
+   ."  Full turn" full.turn @ 5 .r
+   space line-buffer line-length type cr                   
+;
 
-      read-input
+\ Parse and evaluate each command. A command may request
+\ that the dial be turned more than once around. We want
+\ both the full and net effects.
 
-   while                ( consumes flag, leaving length )
 
-      len !             ( length of line read )
+: parse-input ( -- )
+   get.direction get.clicks clicks ! direction !
+   direction @ clicks @ * full.turn !
+   clicks @ 100 /mod drop
+   direction @ * net.turn ! ;
 
-      cr dial @ . space
 
-      line-buffer c@    ( L or R? )      
-      'L' = if          ( L means negative or left )
-         -1 sgn !                  
-      else
-         1 sgn !
-      then              ( sign )
-
-      line-buffer 1+    ( starting position for >number )
-      len @ 1-          ( max length to evaluate )
-      0 0 2swap         ( sign daccum addr len)
-      >number           ( sign ud addr len , parse digits )
-      2drop             ( discard next parse information )
-      drop              ( discard high cell of parsed value )
-      sgn @ *           ( apply sign )
-
-      \ Spin magnitude on TOS.      
-      \ reporting if
-      \    cr 'D' emit dial @ .    ( dial starting postion )
-      \    space
-      \    line-buffer len @ type  ( instruction )
-      \    space
-      \ then
-
-      dial @ + dial !     ( spin the dial )
-
-      spins @ 1+ spins !  ( increment )
-
-   repeat
-   drop                   ( discard 0 length from eof read )
-
-   cr ." answer: "
-   zeros @ .
-   ."k spins: "
-   spins @ .
+: part-1 ( -- )
    cr
-   ;
+   50 dial ! 0 zeros !                 \ clear results
+   begin read-input while
+      parse-input
+      net.turn @ dial @ +              \ turn the knob
+      dup 99 > if 100 - else           \ normalize to 0-99
+      dup 0< if 100 + then then
+      dup next-dial !                  \ save for reporting
+      0= if 1 zeros @ + zeros ! then   \ tally
+      debug-tracer
+      next-dial @ dial !               \ new dial position
+   repeat 
+   cr ." 2025 day 1 part 1 answer: "
+   zeros @ . cr ;
 
-: run
-   s" test.txt" open-input
-   
-   true reporting !
-
-   do-part-1
+: run ( s" input filename" -- )
+   2dup open-input
+   .s
+   part-1
    cr
    fd-in close-file throw
+   cr type
+   \ open-input
+   \ part-2
+   \ cr
+   \ fd-in close-file throw
    cr ." done" ;
 
 \ End of 2025/01/part1.fth
