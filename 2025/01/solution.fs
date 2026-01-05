@@ -43,8 +43,11 @@ variable direction   variable magnitude
 \           82            L30                52
 \           82 30 - 52
 \           52            R48                 0 <-- counts as 1
+\
+\ Invoke from Forth prompt s" datafile" part-one.
 
-: part-1 ( -- )
+: part-one ( -- )
+   in-fn 256 s$>c$  in-fn count r/o open-file  throw  to in-fd
    50 dial ! 0 zeros !
    begin
       in-buf in-max in-fd read-line
@@ -53,24 +56,14 @@ variable direction   variable magnitude
       parse-input   magnitude !  direction !
       magnitude @ 100 mod direction @ * dial @ + \ new
       dup 99 > if 100 - else     \ clip back to 0-99
-      dup 0< if 100 + then then
+      dup 0< if 100 + then   then
       dup new-dial !
       0= if 1 zeros @ + zeros ! then  \ tally stops on zero
       debug-tracer
       new-dial @ dial !         \ update dial
    repeat
-
    cr ." 2025 day 1 part 1 answer: "
-   zeros @ . cr ;
-
-: run ( s" input filename" -- )
-   in-fn 256 s$>c$  in-fn count r/o open-file  throw  to in-fd
-   part-1
-   in-fd close-file throw
-   \ input-file-name count open-input throw
-   \ part-2
-   \ cr
-   \ close-input throw
-   cr ." done" ;
+   zeros @ . cr
+   in-fd close-file throw ;
 
 \ End of solution.fs
