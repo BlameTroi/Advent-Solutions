@@ -1,12 +1,14 @@
 # Advent of Code
 
+**heavily under revision**
+
 My on again off again work on Advent of Code. I started in 2022 with
 golang, didn't enjoy working in the language and stopped. I later
 restarted with Pascal and both 2022 and 2023 will be done in Pascal.
 
 There's nothing special here, just me using AoC as writing prompts.
 The goal is to have fun and stretch my long dormant coding muscles. I
-will often take the path of greatest resistance. Overcoding, odd
+will often take the path of greatest resistance. Over coding, odd
 datatype choices, and repeated violation of 'dry' and 'yagni' will be
 common.
 
@@ -16,17 +18,20 @@ code.
 
 ## Progress
 
-Year    Stars
-2015    50
-2016
+Year    Stars          Language(s)
+2015    50             C99+
+2016                   C99+
 2017
 2018
 2019
 2020
 2021
-2022    30
-2023    22
+2022    30             Pascal and Modern Fortran
+2023    22             Pascal and Modern Fortran
 2024
+2025[1]  1            Forth
+
+[1] From 2025 onward the plan is for 12 days instead of 25.
 
 ## TODO
 
@@ -74,31 +79,32 @@ some build instructions or artifacts. Expect to find at least:
 Each year will likely be monolingual. I use an odd mix of languages:
 I've done some of these in Pascal, Fortran, and C. Next up is likely
 Python (I need to learn the packaging and configuration side of
-things). I also hope to get to Odin, Scheme, and ARM assembly. Heck, I
-might even try mainframe assembly or PL/I.
+things). I also hope to get to Odin, Scheme, and ARM assembly. Heck,
+I might even try mainframe assembly or PL/I.  There's even some
+Forth.
 
 ## Problem Statement and Test Data
 
 The AoC site requests that we not post the full datasets in public
 view. Since AI crawlers have been introduced, I believe this request
-extends to the detailed problem statements. I group these in two other
-private repositories with a parallel directory structure.
+extends to the detailed problem statements. I group these in two
+other private repositories with a parallel directory structure.
 
 I may create smaller test data sets for testing.
 
 ## Notes on Style
 
-I'm using 1980ish tooling with a Neovim, text files, and old school
+I'm using 1980s tooling with a Neovim, text files, and old school
 structured programming. Objects? We don't need no stinking objects.
 
-    Ok, I may use objects if the implementation language expects them.
+*Ok, I may use objects if the implementation language expects them.*
 
 I started out in Pascal, switched to Fortran, and then to C. I redid
 the Pascal code in Fortran but then switched to C. I'm doing my best
 to follow the Cxx standards and avoiding extensions.
 
 I found Free Pascal to be too intertwined with Lazarus to be
-enjoyable. It's a pitty, I prefer using Pascal.
+enjoyable. It's a pity, I prefer using Pascal.
 
 If I get stupidly ambitious I may roll my own ISO Pascal. There are
 some good starting implementations out there.
