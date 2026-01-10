@@ -1,28 +1,32 @@
 \ solution.fs -- AoC 2025 01 Secret Entrance -- T.Brumley.
 
+' noop is bootmessage
 require TxbWords.fs
 require TxbStrings.fs
 
 create in-fn 256 chars allot
-0 value in-fd   80 constant in-max   variable in-len
+80 constant in-max   variable in-len
 create in-buf in-max 2 chars + allot
+0 value in-fd
 
 variable direction   variable magnitude
 variable dial        variable dial-net   variable dial-next
 variable zero-stop   variable zero-pass
 
-\ Print debugging will never die.
+variable flag-line   flag-line off       false value print-logs
 
 : debug-tracer
-  cr ." cur" dial @ 4 .r
-  ."  dir" direction @ 4 .r
-  ."  mag" magnitude @ 6 .r
-  ."  net" dial-net @ 4 .r
-  ."  nxt" dial-next @ 4 .r
-  ."  stop" zero-stop @ 5 .r
-  ."  pass" zero-pass @ 5 .r ;
-\  space in-buf in-len @ type ;
-
+  print-logs if
+    cr ." cur" dial @ 4 .r
+    ."   dir" direction @ 4 .r
+    ."   mag" magnitude @ 6 .r
+    ."   net" dial-net @ 4 .r
+    ."   nxt" dial-next @ 4 .r
+    ."   stop" zero-stop @ 5 .r
+    ."   pass" zero-pass @ 5 .r
+    space in-buf in-len @ type
+    flag-line @ if ."  <---------" then
+  then ;
 
 \ Part One:
 \
@@ -37,55 +41,57 @@ variable zero-stop   variable zero-pass
 \           82 30 - 52
 \           52            R48                 0 <-- counts as 1
 \
-\ Part two:
-\ You remember from the training seminar that "method 0x434C49434B"
-\ means you're actually supposed to count the number of times any click
-\ causes the dial to point at 0, regardless of whether it happens
-\ during a rotation or at the end of one.
+\ Part Two:
 \
-\ Following the same rotations as in the above example, the dial points
-\ at zero a few extra times during its rotations:
+\ You remember from the training seminar that "method
+\ 0x434C49434B" means you're actually supposed to count the
+\ number of times any click causes the dial to point at 0,
+\ regardless of whether it happens during a rotation or at the
+\ end of one.
+\
+\ Following the same rotations as in the above example, the
+\ dial points at zero a few extra times during its rotations:
 
 \ So      Dial           Move          New Dial
-\           50            L68                82 <-- passes 0 once
+\           50            L68                82 <-- passes once
 \           50 -68 + -18 100 + 82
 \           82            L30                52
 \           82 30 - 52
 \           52            R48                 0 <-- counts as 1
 \
 \    The dial starts by pointing at 50.
-\    The dial is rotated L68 to point at 82; it points at 0 once.
+\    The dial is rotated L68 to point at 82; points at 0 once.
 \    The dial is rotated L30 to point at 52.
 \    The dial is rotated R48 to point at 0.
 \    The dial is rotated L5 to point at 95.
-\    The dial is rotated R60 to point at 55; it points at 0 once.
+\    The dial is rotated R60 to point at 55; points at 0 once.
 \    The dial is rotated L55 to point at 0.
 \    The dial is rotated L1 to point at 99.
 \    The dial is rotated L99 to point at 0.
 \    The dial is rotated R14 to point at 14.
-\    The dial is rotated L82 to point at 32; it points at 0 once.
+\    The dial is rotated L82 to point at 32; points at 0 once.
 \
-\ In this example, the dial points at 0 three times at the end of a
-\ rotation, plus three more times during a rotation. So, in this
-\ example, the new password would be 6.
+\ In this example, the dial points at 0 three times at the end
+\ of a rotation, plus three more times during a rotation. So,
+\ in this  example, the new password would be 6.
 \
 \ Invoke from Forth prompt s" datafile" solver.
-
 
 : solver ( -- )
   50 dial ! 0 zero-stop ! 0 zero-pass !
 
   in-fn 256 s$>c$  in-fn count  r/o open-file throw  to in-fd
+  print-logs if cr cr ." dial begins at " dial ? then
   cr
 
   begin
-    in-buf in-max in-fd read-line
+    in-buf in-max in-fd read-line-skip-empty
     throw  swap  in-len !         \ leaves eof flag
   while
     \ part one -- count # times stop at zero
     \ part two -- count # times rolls over, including stop
-    \ Parse ^[LR]d+$ to an magnitude of a turn of the dial (d+$)
-    \ and a direction (L = left = -1).
+    \ Parse ^[LR]d+$ to an magnitude of a turn of the dial
+    \ (d+$) and a direction (L = left = -1).
 
     in-buf c@ 'L' = if -1 else 1 then
     direction !
@@ -95,16 +101,19 @@ variable zero-stop   variable zero-pass
     magnitude !
 
     magnitude @ 100 /mod       \ net effect, full spins
+    dup 0= if flag-line off else flag-line on then
     zero-pass @ + zero-pass !
     dial-net !
 
-    dial-net @ direction @ * dial @ + dial-next !   \ net * direction
+    dial-net @ direction @ * dial @ + dial-next ! \ net * dir
 
     dial-next @
     dup 99 > if 100 - zero-pass dup @ 1+ swap ! else
     dup 0< if 100 + zero-pass dup @ 1+ swap ! then then
 
-    \ dial-next @
+    \ The edge case i'm missing is multi pass ending at zero.
+    \ I think.
+
     dup 99 > if 100 - else
     dup 0< if 100 + then then
     dial-next !
@@ -114,10 +123,35 @@ variable zero-stop   variable zero-pass
     dial-next @ dial !         \ update dial
   repeat
 
+  print-logs if cr cr ." dial ends at " dial ? then
+
   in-fd close-file throw
   cr cr ." 2025 day 1 part 1 answer: "
   zero-stop @ 6 .r
   cr ."            part 2 answer: "
   zero-pass @ 6 .r cr ;
+
+: run-test
+  s" ../../../Advent-Data/2025/01/test.txt" solver ;
+
+: run-live
+  s" ../../../Advent-Data/2025/01/live.txt" solver ;
+
+: run-edge
+  s" edge.txt" solver ;
+
+cr
+cr ." Advent of Code 2025 Day 1"
+cr
+cr ." For detailed output enter:"
+cr ." true to print-logs"
+cr
+cr ." Enter one of the following to run with the named"
+cr ." test data:"
+cr ." run-test          for the example data from problem"
+cr ." run-live          for the live data for the problem"
+cr ." run-edge          for hand cooked test cases"
+cr ." "
+cr ." "
 
 \ End of solution.fs
