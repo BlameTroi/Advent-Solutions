@@ -1,157 +1,142 @@
 \ solution.fs -- AoC 2025 01 Secret Entrance -- T.Brumley.
 
-' noop is bootmessage
-require TxbWords.fs
-require TxbStrings.fs
+\ Part one was trivial, but part two stumped a lot of people.
+\ You may consider me to be part of the "lot". A bunch of
+\ debug code has been pulled out and a set of test cases
+\ are in tests.fs.
+
+\ Common utility definitions: ---------------------------------
+
+\ This is a version of read-line that eats blank lines. Its
+\ interface is the same as read-line.
+
+: read-line-skip-empty ( c-addr u1 fd -- u2 flag ior )
+  { ubuf ulen ufd }
+  begin
+    ubuf ulen ufd read-line { rlen rgot rior }
+          rior if true else
+       rgot 0= if true else
+               rlen then then
+  until
+  rlen rgot rior ;
+
+\ Copy a string to a counted string. I could have just copied
+\ the s-string to a variable and the length into another, but
+\ this was more fun.
+
+: s$>c$ ( s-addr s-u c-addr c-u -- )
+   2dup erase                      \ clear work, s su c cu
+   1- swap 1+ swap                 \ s u c1 u1 adjust for count
+   rot min                         \ s c m
+   2dup swap 1- c!                 \ s c m count in dest
+   move ;                          \ and move
+
+
+\ Problem related definitions: --------------------------------
+
+\ Parse ^[LR]d+$ to find the magnitude of a turn of the dial
+\ (d+$) and its direction ([Ll] = left = -1).
+
+: parse-input ( s-addr u -- n )
+  { str len } 1 { dir }
+  str c@ 'l' = if -1 to dir then
+  str c@ 'L' = if -1 to dir then
+  str char+ len 1- 0 0 2swap >number 2drop drop
+  dir swap * ;
+
+\ Normalize the dial. IE, bring it back within the range
+\ of [0, 100).
+
+: normalize-dial ( n -- u )
+  dup 0 < if 100 + else
+  dup 99 > if 100 - then then
+  100 mod ;
+
+\ Do we end up on zero?
+
+: calculate-one  ( u1 u2 --- n , 1 if ended on zero )
+  + normalize-dial abs 100 mod if 0 else 1 then ;
+
+\ How many clicks "touch" zero? This includes a stop at but not
+\ a start from zero.
+
+\ works but is pooooooorly written
+: calculate-two  ( u1 u2 -- n , how many times at zero )
+  { dial clicks } clicks abs 100 /mod { part full }
+  dial clicks + normalize-dial { normed }
+  normed 0= if
+    part 0= if normed full exit
+    else full 1+ exit then
+  then
+  part 0= if full exit then
+  normed 0= if full exit then
+  full 0= if normed 0= if 1 then then
+  clicks 0< if \ 55 55
+    normed part + 100 > if 1 else 0 then
+  else
+    normed part - 0 < if 1 else 0 then
+  then
+  full + ;
+
+\ Problem state: ----------------------------------------------
+
+\ Definitions prior to this should be pure functions, or as
+\ pure as an i/o operation can be.
 
 create in-fn 256 chars allot
 80 constant in-max   variable in-len
 create in-buf in-max 2 chars + allot
 0 value in-fd
 
-variable direction   variable magnitude
-variable dial        variable dial-net   variable dial-next
-variable zero-stop   variable zero-pass
+variable dial      variable clicks    variable next-dial
+variable part-one  variable part-two
 
-variable flag-line   flag-line off       false value print-logs
+\ Driver for the solution. Use run-live/test interactively to
+\ avoid typing long paths.
 
-: debug-tracer
-  print-logs if
-    cr ." cur" dial @ 4 .r
-    ."   dir" direction @ 4 .r
-    ."   mag" magnitude @ 6 .r
-    ."   net" dial-net @ 4 .r
-    ."   nxt" dial-next @ 4 .r
-    ."   stop" zero-stop @ 5 .r
-    ."   pass" zero-pass @ 5 .r
-    space in-buf in-len @ type
-    flag-line @ if ."  <---------" then
-  then ;
+: solve ( s" input.txt" -- )
 
-\ Part One:
-\
-\ Follow the directions to determine a password. The safe dial
-\ ranges [0-99] and its starting position if 50. Count the
-\ number of times the dial sits at 0 after a spin.
-\ 
-\ So      Dial           Move          New Dial
-\           50            L68                82
-\           50 -68 + -18 100 + 82
-\           82            L30                52
-\           82 30 - 52
-\           52            R48                 0 <-- counts as 1
-\
-\ Part Two:
-\
-\ You remember from the training seminar that "method
-\ 0x434C49434B" means you're actually supposed to count the
-\ number of times any click causes the dial to point at 0,
-\ regardless of whether it happens during a rotation or at the
-\ end of one.
-\
-\ Following the same rotations as in the above example, the
-\ dial points at zero a few extra times during its rotations:
-
-\ So      Dial           Move          New Dial
-\           50            L68                82 <-- passes once
-\           50 -68 + -18 100 + 82
-\           82            L30                52
-\           82 30 - 52
-\           52            R48                 0 <-- counts as 1
-\
-\    The dial starts by pointing at 50.
-\    The dial is rotated L68 to point at 82; points at 0 once.
-\    The dial is rotated L30 to point at 52.
-\    The dial is rotated R48 to point at 0.
-\    The dial is rotated L5 to point at 95.
-\    The dial is rotated R60 to point at 55; points at 0 once.
-\    The dial is rotated L55 to point at 0.
-\    The dial is rotated L1 to point at 99.
-\    The dial is rotated L99 to point at 0.
-\    The dial is rotated R14 to point at 14.
-\    The dial is rotated L82 to point at 32; points at 0 once.
-\
-\ In this example, the dial points at 0 three times at the end
-\ of a rotation, plus three more times during a rotation. So,
-\ in this  example, the new password would be 6.
-\
-\ Invoke from Forth prompt s" datafile" solver.
-
-: solver ( -- )
-  50 dial ! 0 zero-stop ! 0 zero-pass !
-
+  \ Get input file from s" path", persist, and open the file.
   in-fn 256 s$>c$  in-fn count  r/o open-file throw  to in-fd
-  print-logs if cr cr ." dial begins at " dial ? then
-  cr
+
+  50 dial ! 0 part-one ! 0 part-two !
 
   begin
     in-buf in-max in-fd read-line-skip-empty
     throw  swap  in-len !         \ leaves eof flag
   while
-    \ part one -- count # times stop at zero
-    \ part two -- count # times rolls over, including stop
-    \ Parse ^[LR]d+$ to an magnitude of a turn of the dial
-    \ (d+$) and a direction (L = left = -1).
+    in-buf in-len @  parse-input  clicks !
 
-    in-buf c@ 'L' = if -1 else 1 then
-    direction !
+    \ The dial after the clicks. Dial and clicks are passed to
+    \ the calculators. While not strictly needed for part one
+    \ they are for part two.
+    dial @ clicks @ + normalize-dial next-dial !
 
-    in-buf char+  in-len @ 1 chars -  \ string to parse
-    0 0 2swap  >number  2drop drop    \ discard next@ and msc
-    magnitude !
+    \ Part one: count the number of times we stop at zero.
+    dial @ clicks @ calculate-one
+    part-one @ + part-one !
 
-    magnitude @ 100 /mod       \ net effect, full spins
-    dup 0= if flag-line off else flag-line on then
-    zero-pass @ + zero-pass !
-    dial-net !
+    \ Part two: count the number of times a click touches zero.
+    \ This includes stopping on zero but not starting from
+    \ zero.
+    dial @ clicks @ calculate-two
+    part-two @ + part-two !
 
-    dial-net @ direction @ * dial @ + dial-next ! \ net * dir
-
-    dial-next @
-    dup 99 > if 100 - zero-pass dup @ 1+ swap ! else
-    dup 0< if 100 + zero-pass dup @ 1+ swap ! then then
-
-    \ The edge case i'm missing is multi pass ending at zero.
-    \ I think.
-
-    dup 99 > if 100 - else
-    dup 0< if 100 + then then
-    dial-next !
-
-    dial-next @ 0= if zero-stop dup @ 1+ swap ! then  \ @zero
-    debug-tracer
-    dial-next @ dial !         \ update dial
+    next-dial @ dial !
   repeat
 
-  print-logs if cr cr ." dial ends at " dial ? then
-
+  \ And out.
   in-fd close-file throw
   cr cr ." 2025 day 1 part 1 answer: "
-  zero-stop @ 6 .r
+  part-one @ 6 .r
   cr ."            part 2 answer: "
-  zero-pass @ 6 .r cr ;
+  part-two @ 6 .r cr
+  ;
 
 : run-test
-  s" ../../../Advent-Data/2025/01/test.txt" solver ;
+  s" ../../../Advent-Data/2025/01/test.txt" solve ;
 
 : run-live
-  s" ../../../Advent-Data/2025/01/live.txt" solver ;
-
-: run-edge
-  s" edge.txt" solver ;
-
-cr
-cr ." Advent of Code 2025 Day 1"
-cr
-cr ." For detailed output enter:"
-cr ." true to print-logs"
-cr
-cr ." Enter one of the following to run with the named"
-cr ." test data:"
-cr ." run-test          for the example data from problem"
-cr ." run-live          for the live data for the problem"
-cr ." run-edge          for hand cooked test cases"
-cr ." "
-cr ." "
+  s" ../../../Advent-Data/2025/01/live.txt" solve ;
 
 \ End of solution.fs
