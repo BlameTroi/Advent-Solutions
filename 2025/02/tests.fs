@@ -14,6 +14,8 @@
 \ So number is made up of entirely of a repeating sequence?
 \ But are 3 or 4 repeats meaningful? ie, 123123123?
 \
+\ probably in part 2 :/
+\
 \     998-1012 has one invalid ID, 1010.
 \     1188511880-1188511890 has one invalid ID, 1188511885.
 \     222220-222224 has one invalid ID, 222222.
@@ -23,35 +25,66 @@
 
 require test/ttester.fs
 
-T{ 99 1 + dup -> 100 100 }T
-T{ 99 2 2dup + -> 99 2 101 }T
+\ unsigned cell is 20 decimal digits 184....
 
+
+create swork 4096 allot
+
+\ Part one rule for valid is not a repeating pattern.
+\ In other words, the first half of the digits does not
+\ equal the second half of the digits.
 \
-\ no, in as string, called that way from valid-range
-\ if length odd then false exit
-\ split in half
-\ return comparison
-: ?valid-id ( c-addr u -- f )
-  dup 1 and if false exit then    \ odd length
-  \ 0110 6 011 3
-  rshift                          \ half length c1 u1
-  2dup +                          \ half length second half
-  over swap                       \ c1 u1 c2 u2
-  compare 0= ;
+\ any odd length is automatically valid
+\ 99 -> 9|9 -> 9=9 so invalid
+\ 123124 -> 123|124 -> 123<>124 so valid
 
-: ?valid-range ( s" ll-hh" -- flag )
+: ?valid-id$ ( c-addr u -- f )
+  dup 1 and if 2drop false exit then \ odd length?
+  1 rshift                        \ half length c1 u1
+  2dup +                          \ half length second half
+  over                            \ c1 u1 c2 u2
+  compare 0<> ;                   \ proper true/false
+
+\ Given an unsigned double, is it a valid part id? The actual
+\ rule is in ?valid-id$. Convert ud to string and then check
+\ validity.
+
+create $id 256 allot
+: ?valid-id ( ud -- f )           \ sign ignored
+  $id 256 blank                   \ as string in safe location
+  <# #s #> dup >r                 \ addr u, r: u
+  $id swap move $id r>            \ addr u
+  ?valid-id$ ;
+
+\ A range of part ids is a string s" ll-hh,". Convert this to a
+\ pair of unsigned doubles and iterate checking each from ll to
+\ hh for validity. Prints invalid ids.
+\
+\ Assumes that the caller will send us one pair of ids at a
+\ time.
+
+: ?valid-range ( ud ud -- flag )
+  2drop 2drop
   false ;
 
-T{ 11 ?valid-id -> false }T
-T{ 22 ?valid-id -> false }T
-T{ s" 11-22" ?valid-range -> false }T
-T{ s" 12-21" ?valid-range -> true }
-T{ 95 ?valid-id -> true }T
-T{ 99 ?valid-id? -> false }T
-T{ 115 ?valid-id -> true }T
-T{ s" 95-115" ?valid-range -> false }T
-T{ s" 998" ?valid-id -> false }T
-T{ s" 1012" ?valid-id -> false }T
-T{ s" 998-1012" ?valid-range -> false }T
+: ?valid-range$ ( s" ll-hh," -- flag )
+  2dup cr ." # " type cr
+  \ more to come
+  2drop
+  \
+  false ;
+
+T{ 11 0 ?valid-id -> false }T
+T{ 22 0 ?valid-id -> false }T
+T{ s" 11-22" ?valid-range$ -> false }T
+T{ s" 12-21" ?valid-range$ -> true }T
+T{ 95 0 ?valid-id -> true }T
+T{ 99 0 ?valid-id -> false }T
+T{ 115 0 ?valid-id -> true }T
+T{ s" 95-115" ?valid-range$ -> false }T
+T{ s" 998" ?valid-id$ -> true }T
+T{ s" 1012" ?valid-id$ -> true }T
+T{ s" 998-1012" ?valid-range$ -> false }T
+T{ 998 0 1012 0 ?valid-range -> false }T
 
 \ End of tests.fs.
