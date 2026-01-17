@@ -1,5 +1,6 @@
 \ solution.fs -- AoC 2025 02 GIft Shop -- T.Brumley.
 
+require ../common.fs
 
 \ 1-22,95-115,998-1012,1188511880-1188511890,222220-222224,
 \ 1698522-1698528,446443-446449,38593856-38593862,
@@ -28,59 +29,13 @@
 \ Adding up all the invalid IDs in this example produces
 \ 1227775554.
 
-\ globals
+\ Globals: ----------------------------------------------------
 
-\ input for day 2 shoud not exceed 42 +2 bytes per range
-create in-fn 256 chars allot
-80 constant in-max   variable in-len
-create in-buf in-max 2 chars + allot
-0 value in-fd
-false value in-eof
+create scratch 256 allot
+variable range-begin  variable range-end
+variable part-one     variable part-two
 
 \ Common utility definitions: ---------------------------------
-
-
-\ Helpfulish debug trace.
-
-false value do.diag.s
-: diag.s ( c-addr u -- , print .s with tag )
-  if do.diag.s cr type space .s else 2drop then ;
-
-\ Reading the file as bytes r/o bin. A return of 0 0 from here
-\ means logical end of file.
-\
-\ Assuming that HERE will not move across a call from this to
-\ READ-FILE.
-
-: read-file-next-byte ( -- c f/u )
-  0 here c! here 1  in-fd read-file throw  here c@ swap ;
-
-\ Copy a string to a counted string. I could have just copied
-\ the s-string to a variable and the length into another, but
-\ this was more fun.
-
-: s$>c$ ( s-addr s-u c-addr c-u -- )
-   2dup erase                      \ clear work, s su c cu
-   1- swap 1+ swap                 \ s u c1 u1 adjust for count
-   rot min                         \ s c m
-   2dup swap 1- c!                 \ s c m count in dest
-   move ;                          \ and move
-
-\ Given an s string run it through >NUMBER. The return is
-\ identical to >NUMBER.
-
-: parse->number$ ( c-addr1 u1 -- c-addr2 u2 ud )
-  0 0 2swap >number ;
-
-\ A range is a string of two numbers separated by a dash. While
-\ >NUMBER deals in doubles I drop them to single cells. That's
-\ 64 bits which I hope is wide enough.
-
-: parse-range$ ( s-addr u -- s-addr u lo hi )
-  parse->number$ 2swap drop >r     ( stash lo )
-  1- swap 1+ swap                  ( len -1 addr +1 for '-' )
-  parse->number$ 2swap drop
-  r> swap ;                        ( set return add u lo hi )
 
 \ A bad part id is one made up of two pairs of repeating numbers.
 \ So any even number of digits where the first len/2 digits are
@@ -135,19 +90,8 @@ create $id 48 allot
     i ?bad-id-two if i + then
   loop ;
 
-\ : check-range$ ( s" ll-hh," -- flag )
-\   2dup cr ." # " type cr
-\   \ more to come
-\   2drop
-\   \
-\   false ;
-
-
-\ Problem state: ----------------------------------------------
-
-create scratch 256 allot
-variable range-begin  variable range-end
-variable part-one     variable part-two
+\ Input is a single line of ranges separated by commas. There
+\ may or may not be an LF at the end of the file.
 
 : read-to-comma ( c-addr u -- c-addr2 u2 )
   swap ( better ordering )  ( u ca )
@@ -166,8 +110,8 @@ variable part-one     variable part-two
   0 = = to in-eof       ( if 0 = c = u, remember eof )
   swap ;                ( back in caller order )
 
-\ Read the next range from input. low-hi,low-hi<eof> or \n<eof>.
-\ Ranges stored in variables.
+\ Read the next range from input and store the ends [] in
+\ variables. Format of input is: low-hi,low-hi<eof> or \n<eof>.
 
 : get-next-range ( -- f )
   scratch 256 2dup 0 fill
@@ -192,9 +136,7 @@ variable part-one     variable part-two
 
 : solve ( s" input.txt" -- )
 
-  \ Get input file from s" path", persist, and open the file.
-  in-fn 256 s$>c$
-  in-fn count  r/o bin open-file  throw  to in-fd
+  open-input
 
   0 part-one ! 0 part-two !
 
@@ -208,11 +150,11 @@ variable part-one     variable part-two
   repeat
 
   \ And out.
-  in-fd close-file throw
+  close-input
   cr cr ." 2025 day 2 part 1 answer: "
-  part-one @ 32 .r
+  part-one @ 24 .r
   cr ."            part 2 answer: "
-  part-two @ 32 .r cr
+  part-two @ 24 .r cr
   ;
 
 : run-test
