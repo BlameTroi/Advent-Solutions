@@ -74,3 +74,29 @@ false value in-eof
   1- swap 1+ swap                  ( len -1 addr +1 for '-' )
   parse->number$ 2swap drop
   r> swap ;                        ( set return add u lo hi )
+
+\ Fetch the next character from a string, returns 0 if length
+\ remaining < 1.
+
+: c@-next ( c-addr u -- c-addr2 u2 c )
+  dup 1 < if 0 else over c@ -rot 1- swap 1+ swap rot then ;
+
+\ Is this string a single repeating character?
+
+0 value asc-char
+0 value asc-result
+: ?all-same-character ( c-addr u -- f )
+  c@-next to asc-char true to asc-result
+  dup 0 do
+    c@-next asc-char <> if false to asc-result leave then
+  loop 2drop asc-result ;
+
+\ Convert an unsigned single to a string and save it in the
+\ supplied buffer. Result is left justified in buffer and is
+\ quietly truncated if it would overflow the buffer.
+
+: u>$ ( u c-addr u1 -- c-addr u2 )
+  2dup blank rot 0 <# #s #>      \ u c-addr1 u1 c-addr2 u2
+  swap >r min 2dup r> -rot       \ addr addr um
+  move ;                         \
+

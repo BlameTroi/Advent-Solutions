@@ -31,8 +31,8 @@ require ../common.fs
 
 \ Globals: ----------------------------------------------------
 
-create scratch 256 allot
 variable range-begin  variable range-end
+create range$ 32 chars allot
 variable part-one     variable part-two
 
 \ Common utility definitions: ---------------------------------
@@ -47,48 +47,66 @@ variable part-one     variable part-two
 \
 \ yes there is a lot of redundant swizzling here.
 
-: ?bad-id-one$ ( c-addr u -- f )
+\ length     sequences     lengths
+\   10           2 5        5 2
+\    9           3          3
+\    8           2 4        4 2
+\    7           7          1
+\    6           2 3        3 2
+\    5           5          1
+\    4           2          2
+\    3           3          1
+\    2           2          1
+\    -- 0 not possible --
+\
+\ : cs1 CASE 1 OF 111 ENDOF
+\   2 OF 222 ENDOF
+\   3 OF 333 ENDOF
+\   >R 999 R>
+\   ENDCASE
+\
+\    c-addr  u   sequences
+\
+\
+
+: ?two-seq-equal ( c-addr u -- f )
   dup 1 and if 2drop false exit then \ odd length?
-  1 rshift                        \ half length c1 u1
-  2dup +                          \ half length second half
-  over                            \ c1 u1 c2 u2
+  1 rshift                           \ half length c1 u1
+  2dup +                             \ half length second half
+  over                               \ c1 u1 c2 u2
   compare 0= ;
 
-: ?bad-id-two$
-  \ we'll have to loopeth 1 2 3 ... half, watch for odd
-  2drop false ;
+: ?three-seq-equal ( c-addr u -- f )
+  dup 3 /mod swap if 2drop drop false exit then
+  ( c-addr u n , n is length of seq )
+  true
+  ;
 
-\ Given an unsigned single, is it a valid part id? The actual
-\ rule is in ?valid-id$. Convert ud to string and then check
-\ validity.
+: ?four-seq-equal ( c-addr u -- f )
+  dup 4 /mod swap if 2drop drop false exit then
+  ( c-addr u n , n is length of seq )
+  true
+  ;
 
-create $id 48 allot
-: ?bad-id-one ( u -- f )              \ sign ignored
-  $id 48 blank                    \ as string in safe location
-  0 <# #s #> dup >r               \ addr u, r: u
-  $id swap move $id r>            \ addr u
-  ?bad-id-one$ ;
+: ?five-seq-equal ( c-addr u -- f )
+  dup 5 /mod swap if 2drop drop false exit then
+  ( c-addr u n , n is length of seq )
+  true
+  ;
 
-: ?bad-id-two ( u -- f )
-  $id 48 blank
-  0 <# #s #> dup >r
-  $id swap move $id r>
-  ?bad-id-two$ ;
 
 \ A range of part ids is a string s" ll-hh,". Convert this to a
 \ pair integers and then iterate over them checking each in the
 \ range to see if it is invalid. Accumulates a sum of the bad
 \ ids.
 
-: check-range-one ( lo hi -- sum )
-  1+ swap 0 -rot do           ( sum hi lo )
-    i ?bad-id-one if i + then
-  loop ;
-
-: check-range-two ( lo hi -- sum )
-  1+ swap 0 -rot do           ( sum hi lo )
-    i ?bad-id-two if i + then
-  loop ;
+\ An invalid id is one that is made up a repeating sequence of
+\ digits. Note that 11111111 is invalid because 1 repeats 8
+\ times and 11 repeats 4 times and 1111 repeats twice.
+\
+\ Start at 2 halfs and work down. The check can be optimized a
+\ bit by checking the last digit of the first sequence with the
+\ last of the ID. If not equal, try next possibility.
 
 \ Input is a single line of ranges separated by commas. There
 \ may or may not be an LF at the end of the file.
@@ -113,14 +131,15 @@ create $id 48 allot
 \ Read the next range from input and store the ends [] in
 \ variables. Format of input is: low-hi,low-hi<eof> or \n<eof>.
 
+create $scratch 256 allot
 : get-next-range ( -- f )
-  scratch 256 2dup 0 fill
+  $scratch 256 2dup 0 fill
   read-to-comma
   256 swap -       ( actual length used )
   >r
   drop
-  scratch r>
-  scratch c@ 0<> if
+  $scratch r>
+  $scratch c@ 0<> if
     parse-range$ ( s u lo hi )
     range-end !
     range-begin !
@@ -135,20 +154,27 @@ create $id 48 allot
 \ avoid typing long paths.
 
 : solve ( s" input.txt" -- )
-
   open-input
-
   0 part-one ! 0 part-two !
-
   begin
     in-eof if false else get-next-range then
   while
-    range-begin @ range-end @ check-range-one
-    part-one @ + part-one !
-    range-begin @ range-end @ check-range-two
-    part-two @ + part-two !
+    range-end @ 1+ range-begin @ do     ( -- )
+      i range$ 32 u>$
+      2dup ?two-seq-equal if            ( c-a u )
+        i part-one @ + part-one !
+        i part-two @ + part-two !
+        2drop
+      else                              ( c-a u )
+        2dup ?all-same-character if
+          i part-two @ + part-two !
+          2drop
+        else                            ( c-a u )
+          2drop
+        then
+      then
+    loop
   repeat
-
   \ And out.
   close-input
   cr cr ." 2025 day 2 part 1 answer: "
