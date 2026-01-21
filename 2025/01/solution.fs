@@ -1,7 +1,12 @@
 \ solution.fs -- AoC 2025 01 Secret Entrance -- T.Brumley.
 
-132 constant in-max \ override default in common.
-require ../common.fs
+132 constant in-max \ override default in io.fs
+require ../io.fs
+require ../parsing.fs
+require ../strings.fs
+require ../stack.fs
+
+
 
 \ Part one was trivial, but part two stumped a lot of people.
 \ You may consider me to be part of the "lot". A bunch of
