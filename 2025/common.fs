@@ -9,6 +9,14 @@ false value do.diag.s
 : diag.s ( c-addr u -- , print .s with tag )
   do.diag.s if cr type space .s else 2drop then ;
 
+\ Type helpers:
+
+\ A character string with a maximum length and placed on the
+\ stack as c-addr u.
+
+: string create dup , here over blank allot does> dup cell+ swap @ ;
+
+
 \ My standard input file fields. Not all are used in every
 \ program.  When reading by line, the input buffer must
 \ include two extra bytes for possible CRLF.
@@ -52,7 +60,7 @@ false value in-eof
 \ READ-FILE.
 
 : read-file-next-byte ( -- c f/u )
-  0 here c! here 1  in-fd read-file throw  here c@ swap ;
+  0 here c! here 1 in-fd read-file throw  here c@ swap ;
 
 \ Copy a string to a counted string. Will not overflow the
 \ allowed length of the counted string (u2).

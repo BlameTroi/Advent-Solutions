@@ -25,66 +25,13 @@
 
 require test/ttester.fs
 
-\ unsigned cell is 20 decimal digits 184....
-
-
-create swork 4096 allot
-
-\ Part one rule for valid is not a repeating pattern.
-\ In other words, the first half of the digits does not
-\ equal the second half of the digits.
-\
-\ any odd length is automatically valid
-\ 99 -> 9|9 -> 9=9 so invalid
-\ 123124 -> 123|124 -> 123<>124 so valid
-
-: ?valid-id$ ( c-addr u -- f )
-  dup 1 and if 2drop false exit then \ odd length?
-  1 rshift                        \ half length c1 u1
-  2dup +                          \ half length second half
-  over                            \ c1 u1 c2 u2
-  compare 0<> ;                   \ proper true/false
-
-\ Given an unsigned double, is it a valid part id? The actual
-\ rule is in ?valid-id$. Convert ud to string and then check
-\ validity.
-
-create $id 256 allot
-: ?valid-id ( ud -- f )           \ sign ignored
-  $id 256 blank                   \ as string in safe location
-  <# #s #> dup >r                 \ addr u, r: u
-  $id swap move $id r>            \ addr u
-  ?valid-id$ ;
-
-\ A range of part ids is a string s" ll-hh,". Convert this to a
-\ pair of unsigned doubles and iterate checking each from ll to
-\ hh for validity. Prints invalid ids.
-\
-\ Assumes that the caller will send us one pair of ids at a
-\ time.
-
-: ?valid-range ( ud ud -- flag )
-  2drop 2drop
-  false ;
-
-: ?valid-range$ ( s" ll-hh," -- flag )
-  2dup cr ." # " type cr
-  \ more to come
-  2drop
-  \
-  false ;
-
-T{ 11 0 ?valid-id -> false }T
-T{ 22 0 ?valid-id -> false }T
-T{ s" 11-22" ?valid-range$ -> false }T
-T{ s" 12-21" ?valid-range$ -> true }T
-T{ 95 0 ?valid-id -> true }T
-T{ 99 0 ?valid-id -> false }T
-T{ 115 0 ?valid-id -> true }T
-T{ s" 95-115" ?valid-range$ -> false }T
-T{ s" 998" ?valid-id$ -> true }T
-T{ s" 1012" ?valid-id$ -> true }T
-T{ s" 998-1012" ?valid-range$ -> false }T
-T{ 998 0 1012 0 ?valid-range -> false }T
+T{ 11 ?bad-id -> false }T
+T{ 22 ?bad-id -> false }T
+T{ s" 11-22" ?parse-range$ 2swap 2drop -> 11 22 }T
+T{ s" 11" ?parse-number$ -> 11 }T
+T{ s" 12-21" ?parse-range$ 2swap 2drop -> 12 21 }T
+T{ 95 ?bad-id -> false }T
+T{ 99 ?bad-id -> true }T
+T{ 115 ?bad-id -> false }T
 
 \ End of tests.fs.
