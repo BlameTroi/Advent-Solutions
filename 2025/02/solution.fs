@@ -1,6 +1,9 @@
 \ solution.fs -- AoC 2025 02 GIft Shop -- T.Brumley.
 
-require ../common.fs
+require ../io.fs
+require ../parsing.fs
+require ../strings.fs
+require ../stack.fs
 
 \ 1-22,95-115,998-1012,1188511880-1188511890,222220-222224,
 \ 1698522-1698528,446443-446449,38593856-38593862,
@@ -182,7 +185,7 @@ create $scratch 256 allot
         i part-two @ + part-two !
         2drop
       else                              ( c-a u )
-        2dup ?all-same-character if
+        2dup ?all-same-char$ if
           i part-two @ + part-two !
           2drop
         else                            ( c-a u )

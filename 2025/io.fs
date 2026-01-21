@@ -1,5 +1,7 @@
 \ io.fs -- General I/O helpers mostly for AOC -- T.Brumley
 
+require strings.fs
+
 BASE @
 DECIMAL
 

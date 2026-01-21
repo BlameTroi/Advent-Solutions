@@ -48,9 +48,9 @@ DECIMAL
 0 value asc-char
 0 value asc-result
 : ?all-same-char$ ( c-addr u -- f )
-  c@-next to asc-char true to asc-result
+  c@-next$ to asc-char true to asc-result
   dup 0 do
-    c@-next asc-char <> if false to asc-result leave then
+    c@-next$ asc-char <> if false to asc-result leave then
   loop 2drop asc-result ;
 
 \ Convert an unsigned single to a string and save it in the
