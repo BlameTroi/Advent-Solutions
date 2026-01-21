@@ -1,24 +1,36 @@
 \ common.fs -- common code accumulated during AoC -- T.Brumley
 
+BASE @
+DECIMAL
 
 \ Helpfulish debug trace.
 
 false value do.diag.s
 : diag.s ( c-addr u -- , print .s with tag )
-  if do.diag.s cr type space .s else 2drop then ;
+  do.diag.s if cr type space .s else 2drop then ;
 
 \ My standard input file fields. Not all are used in every
 \ program.  When reading by line, the input buffer must
 \ include two extra bytes for possible CRLF.
 
-create in-fn 256 chars allot     \ c" name"
+create in-fn 256 chars allot
 [UNDEFINED] in-max [IF]
-80 constant in-max
+  80 constant in-max
 [THEN]
 variable in-len
 create in-buf in-max 2 chars + allot
 0 value in-fd
 false value in-eof
+
+\ Save input file name and open that file as read only.
+
+: open-input ( c-addr u -- )
+  in-fn 256 s$>c$ in-fn count r/o open-file throw to in-fd ;
+
+\ Close input file (for symmetry).
+
+: close-input ( -- )
+  in-fd close-file throw ;
 
 \ This is a version of read-line that eats blank lines. Its
 \ interface is the same as read-line.
@@ -55,16 +67,6 @@ false value in-eof
 : parse->number$ ( c-addr1 u1 -- c-addr2 u2 ud )
   0 0 2swap >number ;
 
-\ Save input file name and open that file as read only.
-
-: open-input ( c-addr u -- )
-  in-fn 256 s$>c$  in-fn count  r/o open-file throw  to in-fd ;
-
-\ Close input file (for symmetry).
-
-: close-input ( -- )
-  in-fd close-file throw ;
-
 \ A range is a string of two numbers separated by a dash. While
 \ >NUMBER deals in doubles I drop them to single cells. That's
 \ 64 bits which I hope is wide enough.
@@ -100,3 +102,19 @@ false value in-eof
   swap >r min 2dup r> -rot       \ addr addr um
   move ;                         \
 
+\ Can this string be divided into n equally sized substrings?
+\ If so, how long are the substrings? The c-addr is not used
+\ but as strings are passed as c-addr u pairs we accept the
+\ standard and just discard the un-used part.
+
+: ?n-sub$ ( c-addr u n -- un/ f )
+  rot drop /mod swap 0= ;
+
+\ Compare two adjacent strings of length u.
+
+: ?adjacent$-equal ( c-addr u -- f )
+  2dup dup >r + r> compare 0= ;
+
+BASE !
+
+\ End of common.fs

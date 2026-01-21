@@ -69,30 +69,46 @@ variable part-one     variable part-two
 \
 \
 
-: ?two-seq-equal ( c-addr u -- f )
-  dup 1 and if 2drop false exit then \ odd length?
-  1 rshift                           \ half length c1 u1
-  2dup +                             \ half length second half
-  over                               \ c1 u1 c2 u2
-  compare 0= ;
+\ ?compare-adjacent$ ( c-addr u -- f )
+\ ?compare-adjacent$ ( c-addr u -- f )
 
-: ?three-seq-equal ( c-addr u -- f )
-  dup 3 /mod swap if 2drop drop false exit then
-  ( c-addr u n , n is length of seq )
-  true
-  ;
+: ?2-sub$-equal ( c-addr u -- f )
+  2dup 2 ?n-sub$ if              ( c u u2/ )
+    swap drop                    ( c u2/ )
+    ?adjacent$-equal             ( f )
+  else
+    2drop drop false
+  then ;
 
-: ?four-seq-equal ( c-addr u -- f )
-  dup 4 /mod swap if 2drop drop false exit then
-  ( c-addr u n , n is length of seq )
-  true
-  ;
+: ?3-sub$-equal ( c-addr u -- f )
+  2dup 3 ?n-sub$ if
+    swap drop                   ( c u3/ )
+    2dup
+    ?adjacent$-equal            ( c u3/ f )
+    cr .s
+    if
+      swap drop 2dup ?adjacent$-equal
+    else
+      false
+    then
+    2drop
+  else
+    2drop false
+  then ;
 
-: ?five-seq-equal ( c-addr u -- f )
-  dup 5 /mod swap if 2drop drop false exit then
-  ( c-addr u n , n is length of seq )
-  true
-  ;
+: ?4-sub$-equal ( c-addr u -- f )
+  2dup 4 ?n-sub$ if
+    2drop false
+  else
+    2drop false
+  then ;
+
+: ?5-sub$-equal ( c-addr u -- f )
+  2dup 5 ?n-sub$ if
+    2drop false
+  else
+    2drop false
+  then ;
 
 
 \ A range of part ids is a string s" ll-hh,". Convert this to a
@@ -161,7 +177,7 @@ create $scratch 256 allot
   while
     range-end @ 1+ range-begin @ do     ( -- )
       i range$ 32 u>$
-      2dup ?two-seq-equal if            ( c-a u )
+      2dup ?2-sub$-equal if            ( c-a u )
         i part-one @ + part-one !
         i part-two @ + part-two !
         2drop
@@ -178,9 +194,9 @@ create $scratch 256 allot
   \ And out.
   close-input
   cr cr ." 2025 day 2 part 1 answer: "
-  part-one @ 24 .r
+  part-one ?
   cr ."            part 2 answer: "
-  part-two @ 24 .r cr
+  part-two ? cr
   ;
 
 : run-test
