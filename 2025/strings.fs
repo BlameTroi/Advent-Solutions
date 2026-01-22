@@ -6,7 +6,7 @@ DECIMAL
 \ A character string with a maximum length and placed on the
 \ stack as c-addr u.
 \
-\ TODO: initialize to blank.
+\ TODO: alternate initializers.
 \ TODO: byte strings.
 
 : string$ create dup , here over blank allot
@@ -19,6 +19,7 @@ DECIMAL
 \
 \ TODO: This could be cleaner.
 
+\ TODO: Test
 : safe-move$ ( c-addr1 u1 c-addr2 u2 -- )
    2dup 2>r       ( s: a1 u1 a2 u2       r: a2 u2 )
    swap drop 2dup ( s: a1 u1 u2 u1 u2    r: a2 u2 )
@@ -28,7 +29,6 @@ DECIMAL
       drop        ( s: a1 u1             r: a2 u2 )
    then
    2r>
-   cr .s cr
    drop swap      ( s: a1 u? a2 )
    move ;
 
@@ -40,7 +40,8 @@ DECIMAL
    2dup swap 1- c!  move ;
 
 \ Fetch the next character from a string, returns 0 if length
-\ remaining < 1.
+\ remaining < 1. This is meant to be part of an iterator over
+\ a string.
 
 : c@-next$ ( c-addr u -- c-addr2 u2 c )
   dup 1 < if 0 else over c@ -rot 1- swap 1+ swap rot then ;
@@ -55,12 +56,26 @@ DECIMAL
     c@-next$ asc-char <> if false to asc-result leave then
   loop 2drop asc-result ;
 
+\ A general iterator for string predicates.
+
+0 value asp-char
+0 value asp-result
+0 value asp-pred
+: ?all-satisfy-pred$ ( c-addr u pred -- c-addr2 u2 f )
+  to asp-pred true to asp-result cr ." asp " .s
+  dup 0 do
+    c@-next$ asp-pred execute 0= if false to asp-result leave then
+  loop asp-result ;
+
 \ Convert an unsigned single to a string and save it in the
-\ supplied buffer. Result is left justified in buffer and is
-\ quietly truncated if it would overflow the buffer.
+\ supplied buffer. Returns string address and length of the
+\ result, which is left justified in buffer. If the result
+\ would overflow the buffer it is quietly truncated. Unlike
+\ "." there is no trailing blank added and any unused bytes
+\ in the destination are left unchanged.
 
 : u>$ ( u c-addr u1 -- c-addr u2 )
-  2dup blank rot 0 <# #s #>      \ u c-addr1 u1 c-addr2 u2
+  rot 0 <# #s #>                 \ u c-addr1 u1 c-addr2 u2
   swap >r min 2dup r> -rot       \ addr addr um
   move ;                         \
 
@@ -77,7 +92,7 @@ DECIMAL
 : ?adjacent$-equal ( c-addr u -- f )
   2dup dup >r + r> compare 0= ;
 
-\ Several common predicates.
+\ Several common predicates, first for individual characers.
 
 : ?isdigit ( c -- f )  48 58 within ;
 : ?islower ( c -- f )  97 123 within ;
@@ -86,16 +101,38 @@ DECIMAL
 : ?isalpha ( c -- f ) dup ?islower swap ?isupper or ;
 : ?isalphanum ( c -- f ) dup ?isdigit swap ?isalpha or ;
 
-\ Several common converters.
+\ And now predicates for strings. There's an opportunity for
+\ a defining word or some other way of passing an xt to the
+\ ?all-satisfy-pred$ definition, but for now I just use brute
+\ force.
+\
+\ Given a string, returns the position where the predicate
+\ failed if false, or the end of the string if the predicate
+\ succeeded.
 
-: c>upper ( c -- C )
-  dup ?islower if 32 - then ;
+\ All of these: ( c-addr u -- c-addr2 u2 f )
+: ?s>isdigit$ ['] ?isdigit ?all-satisfy-pred$ ;
+: ?s>islower$ ['] ?islower ?all-satisfy-pred$ ;
+: ?s>isupper$ ['] ?isupper ?all-satisfy-pred$ ;
+: ?s>isalpha$ ['] ?isalpha ?all-satisfy-pred$ ;
+: ?s>isalphanum ['] ?isalphanum ?all-satisfy-pred$ ;
 
-: c>lower ( C -- c )
-  dup ?isupper if 32 + then ;
+\ Several common character converters. The final s>.....$
+\ definitions fully exercise the c> and c>$ definitions.
+\
+\ The general structure is:
+\
+\ A single character converter c>something.
+\
+\ A single character converter at a position in a string
+\ c>something$.
+\
+\ A convert the whole string using the prior two definitions
+\ s>something$.
 
-( Current character in string to upper or lower case. String )
-( pointers are updated. Returns when end of string )
+: c>upper ( c -- C )  dup ?islower if 32 - then ;
+
+: c>lower ( C -- c )  dup ?isupper if 32 + then ;
 
 : c>upper$ ( c-addr u -- c-addr2 u2 f )
   dup 0< if false else
@@ -105,8 +142,6 @@ DECIMAL
   dup 0< if false else
   over dup c@ c>lower swap c! 1- swap 1+ swap true then ;
 
-( Entire string to upper or lower case )
-
 : s>upper$ ( c-addr u -- )
   begin c>upper$ 0= until 2drop ;
 
@@ -115,6 +150,8 @@ DECIMAL
 
 \ This is very unsatisfying, but it does work. I guess it's
 \ cleaner than juggling with the return stack.
+
+\ TODO: test
 
 : ?cin$ ( c c-addr u -- c-addr u f )
   2dup { c c-addr u saveu savea } false { result }
@@ -133,8 +170,6 @@ DECIMAL
     then
   until
   result ;
-
-
 
 BASE !
 
