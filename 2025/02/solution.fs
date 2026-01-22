@@ -113,7 +113,6 @@ variable part-one     variable part-two
     2drop false
   then ;
 
-
 \ A range of part ids is a string s" ll-hh,". Convert this to a
 \ pair integers and then iterate over them checking each in the
 \ range to see if it is invalid. Accumulates a sum of the bad

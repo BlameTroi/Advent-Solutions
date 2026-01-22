@@ -6,8 +6,6 @@ require ../parsing.fs
 require ../strings.fs
 require ../stack.fs
 
-
-
 \ Part one was trivial, but part two stumped a lot of people.
 \ You may consider me to be part of the "lot". A bunch of
 \ debug code has been pulled out and a set of test cases
