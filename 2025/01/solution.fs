@@ -1,20 +1,31 @@
 \ solution.fs -- AoC 2025 01 Secret Entrance -- T.Brumley.
 
+BASE @
+DECIMAL
+
 132 constant in-max \ override default in io.fs
 require ../io.fs
 require ../parsing.fs
 require ../strings.fs
 require ../stack.fs
 
-\ Part one was trivial, but part two stumped a lot of people.
-\ You may consider me to be part of the "lot". A bunch of
-\ debug code has been pulled out and a set of test cases
-\ are in tests.fs.
+\ Problem: ----------------------------------------------------
+
+\ For part one, a safe dial starts at 50. The dial is numbered
+\ 0-99. Input are directions such as L123 or R15.
+\
+\ For part one, count the number of times the dial stops at 0
+\ after a turn.
+\
+\ For part two, count the number of times the dial touches 0.
+\ This includes stops.
+
 
 \ Problem state: ----------------------------------------------
 
 variable dial      variable clicks    variable next-dial
 variable part-one  variable part-two
+
 
 \ Helpers: ----------------------------------------------------
 
@@ -31,6 +42,7 @@ variable part-one  variable part-two
   1- swap char+ swap parse->number$ 2drop drop
   r> * ;
 
+
 \ Normalize the dial. IE, bring it back within the range
 \ of [0, 100).
 
@@ -43,6 +55,7 @@ variable part-one  variable part-two
 
 : calculate-one  ( u1 u2 --- n , 1 if ended on zero )
   + normalize-dial abs 100 mod if 0 else 1 then ;
+
 
 \ How many clicks "touch" zero? This includes a stop at but not
 \ a start from zero.
@@ -65,6 +78,7 @@ variable part-one  variable part-two
   then
   full + ;
 
+
 \ Driver: -----------------------------------------------------
 
 \ Driver for the solution. Use run-live/test interactively to
@@ -81,18 +95,11 @@ variable part-one  variable part-two
   while
     in-buf swap  parse-input$  clicks !
 
-    \ The dial after the clicks. Dial and clicks are passed to
-    \ the calculators. While not strictly needed for part one
-    \ they are for part two.
     dial @ clicks @ + normalize-dial next-dial !
 
-    \ Part one: count the number of times we stop at zero.
     dial @ clicks @ calculate-one
     part-one @ + part-one !
 
-    \ Part two: count the number of times a click touches zero.
-    \ This includes stopping on zero but not starting from
-    \ zero.
     dial @ clicks @ calculate-two
     part-two @ + part-two !
 
@@ -106,10 +113,15 @@ variable part-one  variable part-two
   cr ."            part 2 answer: "
   part-two @ 6 .r cr ;
 
+
+\ Save some typing.
+
 : run-test
   s" ../../../Advent-Data/2025/01/test.txt" solve ;
 
 : run-live
   s" ../../../Advent-Data/2025/01/live.txt" solve ;
+
+BASE !
 
 \ End of solution.fs

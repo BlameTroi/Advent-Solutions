@@ -5,6 +5,7 @@ require strings.fs
 BASE @
 DECIMAL
 
+
 \ My standard input file fields. Not all are used in every
 \ program.  When reading by line, the input buffer must
 \ include two extra bytes for possible CRLF.
@@ -28,6 +29,7 @@ false value in-eof
 : close-input ( -- )
   in-fd close-file throw ;
 
+
 \ This is a version of read-line that eats blank lines. Its
 \ interface is the same as read-line.
 \ TODO: get rid of local variables!
@@ -40,6 +42,7 @@ false value in-eof
                rlen then
   until
   rlen rgot ;
+
 
 \ Reading the file as bytes r/o bin. A return of 0 0 from here
 \ means logical end of file.
