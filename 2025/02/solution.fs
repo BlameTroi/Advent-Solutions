@@ -67,51 +67,32 @@ variable part-one     variable part-two
 \   3 OF 333 ENDOF
 \   >R 999 R>
 \   ENDCASE
+
 \
 \    c-addr  u   sequences
 \
 \
-
+\ : ?n-sub$ ( c-addr u n -- un/ f )
+\   rot drop /mod swap 0= ;
 \ ?compare-adjacent$ ( c-addr u -- f )
 \ ?compare-adjacent$ ( c-addr u -- f )
-
+\ lengths are checked in main, won't be called if not possible.
 : ?2-sub$-equal ( c-addr u -- f )
-  2dup 2 ?n-sub$ if              ( c u u2/ )
-    swap drop                    ( c u2/ )
-    ?adjacent$-equal             ( f )
-  else
-    2drop drop false
-  then ;
+    1 rshift  ?adjacent$-equal ;
 
-: ?3-sub$-equal ( c-addr u -- f )
-  2dup 3 ?n-sub$ if
-    swap drop                   ( c u3/ )
-    2dup
-    ?adjacent$-equal            ( c u3/ f )
-    cr .s
-    if
-      swap drop 2dup ?adjacent$-equal
-    else
-      false
-    then
-    2drop
-  else
-    2drop false
-  then ;
+variable n-sub$-equal
+: ?n-sub$-equal ( c-addr u n ) ( u is sub length, so entire is n u * )
+  n-sub$-equal on
+  1 do ( not 0 )
+    2dup 2dup + over ( hold sub1 sub2 )
+    compare if n-sub$-equal off leave then
+    swap over ( u addr u ) + swap
+  loop
+  2drop n-sub$-equal @ ;
 
-: ?4-sub$-equal ( c-addr u -- f )
-  2dup 4 ?n-sub$ if
-    2drop false
-  else
-    2drop false
-  then ;
 
-: ?5-sub$-equal ( c-addr u -- f )
-  2dup 5 ?n-sub$ if
-    2drop false
-  else
-    2drop false
-  then ;
+\ : ?adjacent$-equal ( c-addr u -- f )
+\   2dup dup >r + r> compare 0= ;
 
 \ A range of part ids is a string s" ll-hh,". Convert this to a
 \ pair integers and then iterate over them checking each in the
@@ -171,6 +152,9 @@ create $scratch 256 allot
 \ Driver for the solution. Use run-live/test interactively to
 \ avoid typing long paths.
 
+: add-one cr dup ." one=" . part-one +! ;
+: add-two cr dup ." two=" . part-two +! ;
+
 : solve ( s" input.txt" -- )
   open-input
   0 part-one ! 0 part-two !
@@ -179,18 +163,48 @@ create $scratch 256 allot
   while
     range-end @ 1+ range-begin @ do     ( -- )
       i range$ 32 u>$
-      2dup ?2-sub$-equal if            ( c-a u )
-        i part-one @ + part-one !
-        i part-two @ + part-two !
-        2drop
-      else                              ( c-a u )
-        2dup ?all-same-char$ if
-          i part-two @ + part-two !
-          2drop
-        else                            ( c-a u )
-          2drop
-        then
-      then
+
+      \ Lengths top out at 10 and the possible arrangements of
+      \ patterns is fixed based on length. Within each length
+      \ work toward smaller patterns. Only the prime lengths
+      \ need to check for all digits being the same, as this
+      \ will be caught by an earlier repeating check for a
+      \ longer group. Example: 10 -> 2 5 1 (group len 5 2 1).
+      \
+      \ length     sequences     lengths
+      \   10           2 5        5 2
+      \    9           3          3
+      \    8           2 4        4 2
+      \    7           7          1
+      \    6           2 3        3 2
+      \    5           5          1
+      \    4           2          2
+      \    3           3          1
+      \    2           2          1
+      \    -- 1 unclear from spec, ignored --
+      \    -- 0 not possible --
+
+      dup ( len ) case
+        10 of 2dup ?2-sub$-equal if i dup add-one add-two 2drop
+              else drop 2 5 ?n-sub$-equal if i add-two then
+              then endof
+         9 of 2dup drop 3 3 ?n-sub$-equal if i add-two 2drop
+              else ?all-same-char$ if i add-two then
+              then endof
+         8 of 2dup ?2-sub$-equal if i dup add-one add-two 2drop
+              else drop 2 4 ?n-sub$-equal if i add-two then
+              then endof
+         7 of ?all-same-char$ if i add-two then endof
+         6 of 2dup ?2-sub$-equal if i dup add-one add-two 2drop
+              else drop 2 3 ?n-sub$-equal if i add-two then
+              then endof
+         5 of ?all-same-char$ if i add-two then endof
+         4 of ?2-sub$-equal if i dup add-one add-two then endof
+         3 of ?all-same-char$ if i add-two then endof
+         2 of ?all-same-char$ if i dup add-one add-two then endof
+         1 of ( a run from 3-9 in live ) 2drop endof
+         ( default of ) ." error bad id length " . i . abort"  fail" ( endof )
+      endcase
     loop
   repeat
   \ And out.
