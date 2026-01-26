@@ -1,13 +1,15 @@
-\ solution.fs -- AoC 2025 03 Lobby -- T.Brumley.
+\ driver.fs -- String experiments -- T.Brumley.
 
 BASE @
 DECIMAL
 
 132 constant in-max \ override default in io.fs
-require ../io.fs
-require ../parsing.fs
-require ../strings.fs
-require ../stack.fs
+require io.fs
+require parsing.fs
+require strings.fs
+require stack.fs
+require text.fs
+require within.fs
 
 \ Problem: ----------------------------------------------------
 
@@ -35,7 +37,14 @@ require ../stack.fs
 \ For part two:
 \
 \ Instead of two batteries turn on the 12 batteries that will
-\ produce the highest "joltage." It's a combinatorial problem.
+\ produce the highest "joltage." It's a "best of the remaing"
+\ problem. To find the first digit, select the largest digit
+\ from the remaining string less the last 11 digits. To find
+\ the second digit, select the largest digit to the right of
+\ the first digit less the last 10 digits. Repeat ad nauseum.
+\
+\ No need to get too cute here, but we need several helper
+\ functions.
 \
 \ For the above data:
 \
@@ -86,15 +95,68 @@ variable part-one  variable part-two
 \ there are in the order presented. This is a greedy selection
 \ from a set of decreasing size problem.
 
+: s1full s" 987654321111111" ;   ( drops some ones from end )
+\                      ***
+: s1part s" 987654321111" ;
+
+: s2full s" 811111111111119" ;
+\                      **
+: s2part s" 811111111119" ;       ( drops some ones before end )
+
+: s3full s" 234234234234278" ;
+\          ** *
+: s3part s" 434234234278" ;       ( 2 3 and 2 near start )
+\ 234234 largest digit 4 ...
+
+: s4full s" 818181911112111" ;    ( dropping ones near start )
+\           * * *
+: s4part s" 888911112111" ;
+
+\ edge: if remaining string length = needed length, done
+\
+\ error: if remaining string length < needed length, abort
+
+\ to find first digit
+\ full len = 15
+\ remaining after digit = 11
+\ therefore largest digit in first 4
+\ 987654321
+\ 0123
+\ ____|
+
+\ so
+\ find largest in substring, adjust string pointer to after largest
+
+: largest-char-in {: str len | chr idx :}
+  str c@ to chr 0 to idx ( assume first is largest )
+  len 1 do
+    str i + c@
+    dup chr > if
+      to chr i to idx
+    else
+      drop
+    then
+  loop
+  idx +
+  len idx - ;
+
 : highest-joltage-two ( c-addr u -- n )
   2drop 3141597312 ( just some random number )
   ;
 
+: local-test { a s d f -- }
+  cr a . s . d . f .
+  5 { f } \ this gets a redefined warning but f does pick up
+          \ 5 as expected
+  cr a . s . d . f .
+  10 0 do
+    i { f } cr f . \ f is not scoped, the f below gets the value 9
+  loop \ also redefined but has right val
+  cr a . s . d . f . ;
 
-\ Driver: -----------------------------------------------------
 
-\ Driver for the solution. Use run-live/test interactively to
-\ avoid typing long paths.
+
+
 
 : solve ( s" input.txt" -- )
 
@@ -124,11 +186,11 @@ variable part-one  variable part-two
 \ Save some typing.
 
 : run-test
-  s" ../../../Advent-Data/2025/03/test.txt" solve ;
+  s" test.txt" solve ;
 
 : run-live
-  s" ../../../Advent-Data/2025/03/live.txt" solve ;
+  s" live.txt" solve ;
 
-BASE !
 
-\ End of solution.fs
+\ End of driver.fs
+

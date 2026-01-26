@@ -3,9 +3,13 @@
 BASE @
 DECIMAL
 
+\ Bits of code for parsing input data. Usually for Advent of
+\ Code problems.
+
 
 \ Given a string run it through >NUMBER. The return is
-\ identical to >NUMBER, this factors out the standard setup.
+\ identical to >NUMBER, this just factors out the standard
+\ setup.
 
 : parse->number$ ( c-addr1 u1 -- c-addr2 u2 ud )
   0 0 2swap >number ;

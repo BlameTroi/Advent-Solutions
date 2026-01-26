@@ -2,7 +2,6 @@
 
 require test/ttester.fs
 
-BASE @
 DECIMAL
 
 \ Test data.
@@ -90,9 +89,43 @@ cr ." Testing single character predicates (for completeness): " cr
 
 T{ '0' ?isdigit '9' ?isdigit 'a' ?isdigit -> true true false }T
 
+cr ." Testing cin$: " cr ( c c-addr u -- c-addr2 u2 flag )
+
+: test98 s" 987654321111111" ;
+: test89 s" 811111111111119" ;
+: test78 s" 234234234234278" ;
+: test92 s" 818181911112111" ;
+
+verbose on
+
+\ Find or not find from start:
+
+T{ '9' test98 cin$ cr .s cr -> test98 drop 1+ test98 swap drop 1- true }T
+T{ '8' test98 cin$ cr .s cr -> true }T
+T{ '0' test98 cin$ cr .s cr -> false }T
+
+\ \ Try repeated find:
+
+\ cr ." Seek 98 in " test98 type cr
+
+\ T{
+\   '9' test98 cin$ drop ( flag )
+\   hex cr .s cr decimal
+\   '8' -rot cin$
+\   hex cr .s cr decimal
+\   -> true
+\   }T
+
+\ cr ." Seek 89 in " test89 type cr
+
+\ T{
+\   '9' test89 cin$ drop ( flag )
+\   hex cr .s cr decimal
+\   '8' -rot cin$
+\   hex cr .s cr decimal
+\   -> false
+\   }T
 
 cr ." End of strings.fs tests! " cr
-
-BASE !
 
 \ End of test-strings.fs

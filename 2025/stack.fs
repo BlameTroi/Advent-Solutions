@@ -5,24 +5,30 @@ DECIMAL
 
 \ OVERVIEW:
 \
-\ An extra stack. The Forth data stack is primarily for parameter
-\ passing and arithmetic operations. Stacks are also useful for
-\ LIFO storage.
+\ An extra stack. The Forth data stack is primarily for
+\ parameter passing and arithmetic operations. Stacks are also
+\ useful for LIFO storage.
 \
 \ The original idea is from _Thinking Forth_ but I have added
-\ more functionality and come up with my own naming standard.
+\ more functionality and came up with my own naming standard.
 \
 \ Here's hoping the naming consistency helps.
 \
 \ NOTE:
 \
-\ Several of these names shadow
+\ Several of these names shadow other functions in
+\ kernel/recognizer.fs. Comments there say that the
+\ code is no longer needed by the recognizer but
+\ some other parts of the kernel use it.
+\
 \ TODO:
 \
 \ 1. Should STACK be <STACK (start stack) to parallel STACK>
 \    (stack end)?
 \
 \ 2. How might I manage multiple parallel stacks?
+\
+\ 3. Stack drop.
 \
 \ GLOSSARY:
 \
@@ -63,15 +69,6 @@ here constant stack>
       stack i 1+ cells + ?
     loop
   then ;
-
-require test/ttester.fs
-
-verbose on
-T{ stack0 stack# -> 0 }T
-T{ stack0 3 stack! 2 stack! stack# stack@ * stack@ * -> 12 }T
-T{ stack0 3 stack! stack# stack^ stack# -> 1 3 1 }T
-T{ stack0 3 stack! stack# stack@ stack# -> 1 3 0 }T
-verbose off
 
 BASE !
 

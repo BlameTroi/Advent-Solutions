@@ -21,17 +21,8 @@ DECIMAL
 \
 \ TODO: This could be cleaner.
 
-: safe-move$ ( c-addr1 u1 c-addr2 u2 -- )
-   2dup 2>r       ( s: a1 u1 a2 u2       r: a2 u2 )
-   swap drop 2dup ( s: a1 u1 u2 u1 u2    r: a2 u2 )
-   > if           ( s: a1 u1 u2 u1>u2    r: a2 u2 )
-      swap drop   ( s: a1 u2             r: a2 u2 )
-   else
-      drop        ( s: a1 u1             r: a2 u2 )
-   then
-   2r>
-   drop swap      ( s: a1 u? a2 )
-   move ;
+: safe-move$ {: str1 len1 str2 len2 -- :}
+  len1 len2 min str1 swap str2 over move ;
 
 
 \ Copy a string to a counted string. Will not overflow the
@@ -46,32 +37,66 @@ DECIMAL
 \ remaining < 1. This is meant to be part of an iterator over
 \ a string.
 
+: nextpos$ ( c-addr u -- c-addr+1 u-1 , 0 if can't advance )
+  dup if 1- swap 1+ swap then ;
+
 : c@-next$ ( c-addr u -- c-addr2 u2 c )
   dup 1 < if 0 else over c@ -rot 1- swap 1+ swap rot then ;
+
+
+
+\ Find the location of character c in a standard string. The
+\ return is a string starting from that character. If the
+\ character is not found, a string of length 0 is returned.
+\
+\ For repeated calls forward through a string the caller must
+\ adjust the string.
+\
+\ '9' ." 9823" cposin$ '8' -rot 1- swap 1+ swap cposin$
+
+: cposin$ ( c c-addr u -- c-addr2 u2 , c-addr+u 0 if not found )
+  rot >r  ( stash char ) 1+ swap 1- swap ( fix up for start )
+  begin
+    1- swap 1+ swap                   ( adjust )
+    2dup 0= if drop true else c@ r@ = then ( match? )
+  until
+  r> drop ( discard char ) ;
+
+
+\ find largest in substring, adjust string pointer to after largest
+
+: largest-char-in {: str len | chr idx -- str2 len2 :}
+  str c@ to chr 0 to idx ( assume first is largest )
+  len 1 do
+    str i + c@ dup chr > if to chr i to idx else drop then
+  loop
+  str idx + len idx - ( locate the character ) ;
 
 
 \ Iterate over the characters in a string and perform some
 \ test.
 
-\ Is this string a single repeating character?
+\ Is this string a single repeating character? Returns false
+\ and the substring starting from mismatched character or true
+\ and the string pointer past the end of the original string.
 
-0 value asc-char
-0 value asc-result
-: ?all-same-char$ ( c-addr u -- flag )
-  c@-next$ to asc-char true to asc-result
+: ?all-same-char$ {: ( str len ) | chr result -- str2 len2 flag :}
+  c@-next$ to chr true to result
   dup 0 do
-    c@-next$ asc-char <> if false to asc-result leave then
-  loop 2drop asc-result ;
+    c@-next$ chr <> if 1+ swap 1- swap false to result leave then
+  loop result ;
 
-\ A general iterator for string predicates.
 
-0 value asp-result
-0 value asp-pred
-: ?all-satisfy-pred$ ( c-addr u xt -- c-addr2 u2 flag )
-  to asp-pred true to asp-result
+\ A general iterator for string predicates. c@-next$ updates
+\ the string pointer with each call. Returns false with the
+\ string pointer to the failing character or true with the
+\ string pointer pastt he end of the original string.
+
+: ?all-satisfy-pred$ {: str len xt | result -- str2 len2 flag :}
+  str len true to result
   dup 0 do
-    c@-next$ asp-pred execute 0= if false to asp-result leave then
-  loop asp-result ;
+    c@-next$ xt execute 0= if 1+ swap 1- swap false to result leave then
+  loop result ;
 
 
 \ Convert an unsigned single to a string and save it in the
@@ -106,15 +131,14 @@ DECIMAL
 \ Compare n adjacent strings of length u. So the entire string
 \ would be n u * bytes long.
 
-variable n-sub$-equal ( unfortunately I needed a variable )
-: ?n-sub$-equal ( c-addr u n )
-  n-sub$-equal on
+: ?n-sub$-equal {: ( str len n ) | result -- flag :}
+  true to result
   1 do ( n segments require n 1- compares, so start at 1 )
     2dup 2dup + over
-    compare if n-sub$-equal off leave then
+    compare if false to result leave then
     swap over + swap
   loop
-  2drop n-sub$-equal @ ;
+  2drop result ;
 
 
 \ Several common character predicates.
@@ -181,7 +205,23 @@ variable n-sub$-equal ( unfortunately I needed a variable )
 \ TODO: This is very unsatisfying, but it does work. It needs a
 \ rewrite.
 
-: ?cin$ ( c c-addr u -- c-addr u flag )
+\ : cin$ ( c c-addr u -- c-addr2 u2 )
+\   rot >r
+\   begin
+\     c@-next$ r@ = ( find? )
+\     over 1 < or
+\   until
+\   dup 0= if r> drop then ;
+
+: cin$ ( c c-addr u -- c-addr2 u2 flag )
+  rot >r
+  begin
+    c@-next$ r@ = ( find? )
+    over 1 < or
+  until r> drop ;
+
+
+: ?cin$ {: chr str len | savs savl result -- str len flag :}
   2dup { c c-addr u saveu savea } false { result }
   begin
     u 1- dup to u               ( adjust remaining after this )

@@ -8,7 +8,7 @@ DECIMAL
 
 \ My standard input file fields. Not all are used in every
 \ program.  When reading by line, the input buffer must
-\ include two extra bytes for possible CRLF.
+\ include two extra bytes for a possible CRLF.
 
 create in-fn 256 chars allot
 [UNDEFINED] in-max [IF]
@@ -18,6 +18,7 @@ variable in-len
 create in-buf in-max 2 chars + allot
 0 value in-fd
 false value in-eof
+
 
 \ Save input file name and open that file as read only.
 
@@ -32,19 +33,19 @@ false value in-eof
 
 \ This is a version of read-line that eats blank lines. Its
 \ interface is the same as read-line.
-\ TODO: get rid of local variables!
+\ TODO: Clean up, this is a bit sloppy.
 
-: read-line-skip-empty ( c-addr u1 -- u2 flag )
-  { ubuf ulen }
+: read-line-skip-empty {: ( ubuf ulen ) | rlen rgot -- u2 flag :}
   begin
-    ubuf ulen in-fd read-line throw { rlen rgot }
+    2dup in-fd read-line throw to rgot to rlen
        rgot 0= if true else
                rlen then
   until
+  2drop
   rlen rgot ;
 
 
-\ Reading the file as bytes r/o bin. A return of 0 0 from here
+\ Reading the file as bytes (usually R/O BIN. A return of 0 0
 \ means logical end of file.
 \
 \ Assumes that HERE will not move across a call from this to

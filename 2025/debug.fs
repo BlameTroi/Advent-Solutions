@@ -3,6 +3,8 @@
 BASE @
 DECIMAL
 
+\ Assorted things I have found helpful when debugging.
+
 \ Helpfulish debug trace.
 
 false value do.diag.s

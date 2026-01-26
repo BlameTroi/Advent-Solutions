@@ -15,8 +15,12 @@ DECIMAL
 \ length byte followed by room for at least 32 characters.
 \
 \ The original definition I used is from _Starting Forth_.
+\
+\ This does not return any length information. I assume that
+\ people would surround calls with PAD 84 BLANK and
+\ PAD 84 -TRAILING to get a proper length.
 
-84 value pad-usable-len                 \ 84 is a minimum
+84 constant pad-usable-len              \ 84 is a minimum
 : text ( c -- , delimiter for word )
    word count pad-usable-len min        \ c-addr u
    pad dup pad-usable-len erase swap move ; \ move to pad

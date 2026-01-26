@@ -47,14 +47,13 @@ variable part-one  variable part-two
     in-buf swap  parse-input$  \ what next
     part-one @ + part-one !
     part-two @ + part-two !
-    next-dial @ dial !
   repeat
   drop
 
   in-fd close-file throw
-  cr cr ." 2025 day ? part 1 answer: "
+  cr cr ." 2025 day ?? part 1 answer: "
   part-one @ 6 .r
-  cr ."            part 2 answer: "
+     cr ."             part 2 answer: "
   part-two @ 6 .r cr ;
 
 

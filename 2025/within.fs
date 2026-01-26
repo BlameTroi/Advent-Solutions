@@ -3,6 +3,8 @@
 BASE @
 DECIMAL
 
+\ Words relating to ranging.
+
 
 \ Add a closed interval range check. I can't come up with a
 \ consistent naming using ( and ] that won't be confused with
