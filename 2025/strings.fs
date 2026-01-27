@@ -5,7 +5,7 @@ DECIMAL
 
 
 \ A character string with a maximum length and placed on the
-\ stack as c-addr u.
+\ stack as c-addr u. The string is initialized to blanks.
 \
 \ TODO: alternate initializers.
 \ TODO: byte strings.
@@ -80,8 +80,9 @@ DECIMAL
 \ and the substring starting from mismatched character or true
 \ and the string pointer past the end of the original string.
 
-: ?all-same-char$ {: ( str len ) | chr result -- str2 len2 flag :}
-  c@-next$ to chr true to result
+: ?all-same-char$ {: str len | chr result -- str2 len2 flag :}
+  str len true to result
+  over c@ to chr
   dup 0 do
     c@-next$ chr <> if 1+ swap 1- swap false to result leave then
   loop result ;
@@ -161,11 +162,11 @@ DECIMAL
 \ succeeded.
 
 \ All of these: ( c-addr u -- c-addr2 u2 f )
-: ?s>isdigit$ ['] ?isdigit ?all-satisfy-pred$ ;
-: ?s>islower$ ['] ?islower ?all-satisfy-pred$ ;
-: ?s>isupper$ ['] ?isupper ?all-satisfy-pred$ ;
-: ?s>isalpha$ ['] ?isalpha ?all-satisfy-pred$ ;
-: ?s>isalphanum ['] ?isalphanum ?all-satisfy-pred$ ;
+: ?isdigit$ ['] ?isdigit ?all-satisfy-pred$ ;
+: ?islower$ ['] ?islower ?all-satisfy-pred$ ;
+: ?isupper$ ['] ?isupper ?all-satisfy-pred$ ;
+: ?isalpha$ ['] ?isalpha ?all-satisfy-pred$ ;
+: ?isalphanum$ ['] ?isalphanum ?all-satisfy-pred$ ;
 
 
 \ Several common character converters. The final s>.....$
@@ -200,44 +201,18 @@ DECIMAL
   begin c>lower$ 0= until 2drop ;
 
 
-\ Find the first occurrence of character c in a string.
-
-\ TODO: This is very unsatisfying, but it does work. It needs a
-\ rewrite.
-
-\ : cin$ ( c c-addr u -- c-addr2 u2 )
-\   rot >r
-\   begin
-\     c@-next$ r@ = ( find? )
-\     over 1 < or
-\   until
-\   dup 0= if r> drop then ;
-
-: cin$ ( c c-addr u -- c-addr2 u2 flag )
-  rot >r
-  begin
-    c@-next$ r@ = ( find? )
-    over 1 < or
-  until r> drop ;
+\ Find the first occurrence of character c in a string. Return
+\ an updated string pointer and a flag. If the string was not
+\ found the string poiner points just past the input string.
 
 
-: ?cin$ {: chr str len | savs savl result -- str len flag :}
-  2dup { c c-addr u saveu savea } false { result }
-  begin
-    u 1- dup to u               ( adjust remaining after this )
-    0< if                       ( we ran out of string )
-      savea saveu true          ( reset to not found config and exit until )
-    else
-      c-addr dup c@ swap 1+ to c-addr ( get char, bump to next )
-      c = if                    ( match )
-        true to result          ( remember )
-        c-addr u true           ( reset to found config and exit until )
-      else
-        false                   ( continue )
-      then
-    then
-  until
-  result ;
+: cin$ {: chr str len | idx flag -- str2 len2 flag :}
+  false to flag len to idx
+  str len 0 do
+    dup i + c@ chr = if i to idx true to flag leave then
+  loop
+  idx + len idx - flag ;
+
 
 BASE !
 

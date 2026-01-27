@@ -2,6 +2,7 @@
 
 require test/ttester.fs
 
+BASE @
 DECIMAL
 
 \ Test data.
@@ -26,15 +27,17 @@ DECIMAL
 
 \ Types.
 
-cr ." Testing string$ type: " cr
+cr ." Testing string$ type, ?all-same-char$, and c@-next$: " cr
 
-\ The third test coincidentally tests string is all the same
-\ character and fetch next character from string.
+\ There is no "wild card" for stack results we don't care about
+\ in test/ttester so some swizzling to get the expected pointer
+\ values is required.
 
 T{ 256 string$ s256 -> }T   \ TODO: address of?
 T{ s256 swap drop -> 256 }T
-T{ s256 ?all-same-char$ -> true }T
-T{ 'a' S256 drop c! s256 ?all-same-char$ -> false }T
+T{ s256 ?all-same-char$ -> s256 drop 256 + 0 true }T
+T{ 'a' S256 drop c! s256 ?all-same-char$ -> s256 drop 1 + 255 false }T
+T{ bl s256 drop c! s256 drop c@ -> bl }T     \ restore s256 to blanks
 
 \ Number to string.
 
@@ -88,8 +91,25 @@ T{ s12345678 drop 4 ?adjacent$-equal -> false }T
 cr ." Testing single character predicates (for completeness): " cr
 
 T{ '0' ?isdigit '9' ?isdigit 'a' ?isdigit -> true true false }T
+T{ 'a' ?islower 'z' ?islower 'A' ?islower '9' ?islower -> true true false false }T
+T{ 'A' ?isupper 'Z' ?isupper 'a' ?isupper '9' ?isupper -> true true false false }T
+T{ 32 ?iswhite 'a' ?iswhite 10 ?iswhite 'A' ?iswhite '3' ?iswhite -> true false true false false }T
+T{ 'a' ?isalpha 'A' ?isalpha '+' ?isalpha bl ?isalpha '0' ?isalpha -> true true false false false }T
+T{ 'a' ?isalphanum '0' ?isalphanum '+' ?isalphanum bl ?isalphanum -> true true false false }T
 
-cr ." Testing cin$: " cr ( c c-addr u -- c-addr2 u2 flag )
+cr ." Testing predicate against string: " cr
+
+\ The predicates are all tested above, so just hit a few here
+\ to exercise ?all-satisfy-pred$.
+
+: sremixed s" thisISamixedcasewithNOSpaces" ;
+
+T{ sremixed ?islower$ -> sremixed 4 - swap 4 + swap false }T
+T{ sremixed ?isupper$ -> sremixed false }T
+T{ sremixed ?isalpha$ -> sremixed + 0 true }T
+T{ sremixed ?isalphanum$ -> sremixed + 0 true }T
+
+cr ." Testing cin$ basic behavior: " cr
 
 : test98 s" 987654321111111" ;
 : test89 s" 811111111111119" ;
@@ -100,32 +120,30 @@ verbose on
 
 \ Find or not find from start:
 
-T{ '9' test98 cin$ cr .s cr -> test98 drop 1+ test98 swap drop 1- true }T
-T{ '8' test98 cin$ cr .s cr -> true }T
-T{ '0' test98 cin$ cr .s cr -> false }T
+T{ '9' test98 cin$ -> test98 true }T
+T{ '8' test98 cin$ -> test98 1- swap 1+ swap true }T
+T{ '0' test98 cin$ -> test98 + 0 false }T
 
-\ \ Try repeated find:
+cr ." Testing cin$ repeated finds thorugh string: " cr
 
-\ cr ." Seek 98 in " test98 type cr
+\ works finding the leading 98.
 
-\ T{
-\   '9' test98 cin$ drop ( flag )
-\   hex cr .s cr decimal
-\   '8' -rot cin$
-\   hex cr .s cr decimal
-\   -> true
-\   }T
+T{
+  '9' test98 cin$ drop ( flag )
+  '8' -rot cin$
+  -> test98 1- swap 1+ swap true
+  }T
 
-\ cr ." Seek 89 in " test89 type cr
+\ fails, test89 is 8-many1s-9.
 
-\ T{
-\   '9' test89 cin$ drop ( flag )
-\   hex cr .s cr decimal
-\   '8' -rot cin$
-\   hex cr .s cr decimal
-\   -> false
-\   }T
+T{
+  '9' test89 cin$ drop ( flag )
+  '8' -rot cin$
+  -> test89 + 0 false
+  }T
 
 cr ." End of strings.fs tests! " cr
+
+BASE !
 
 \ End of test-strings.fs
