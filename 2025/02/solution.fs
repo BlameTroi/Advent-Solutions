@@ -130,19 +130,19 @@ create $scratch 256 allot
               else drop 2 5 ?n-sub$-equal if i add-two then
               then endof
          9 of 2dup drop 3 3 ?n-sub$-equal if i add-two 2drop
-              else ?all-same-char$ if i add-two then
+              else ?all-same-char$ if i add-two then 2drop
               then endof
          8 of 2dup ?2-sub$-equal if i dup add-one add-two 2drop
               else drop 2 4 ?n-sub$-equal if i add-two then
               then endof
-         7 of ?all-same-char$ if i add-two then endof
+         7 of ?all-same-char$ if i add-two then 2drop endof
          6 of 2dup ?2-sub$-equal if i dup add-one add-two 2drop
               else drop 2 3 ?n-sub$-equal if i add-two then
               then endof
-         5 of ?all-same-char$ if i add-two then endof
+         5 of ?all-same-char$ if i add-two then 2drop endof
          4 of ?2-sub$-equal if i dup add-one add-two then endof
-         3 of ?all-same-char$ if i add-two then endof
-         2 of ?all-same-char$ if i dup add-one add-two then endof
+         3 of ?all-same-char$ if i add-two then 2drop endof
+         2 of ?all-same-char$ if i dup add-one add-two then 2drop endof
          1 of ( a run from 3-9 in live ignored ) 2drop endof
          ( default of ) ." error bad id length " . i . abort"  fail" ( endof )
       endcase

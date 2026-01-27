@@ -101,13 +101,14 @@ DECIMAL
 
 
 \ Convert an unsigned single to a string and save it in the
-\ supplied buffer. Returns string address and length of the
-\ result, which is left justified in buffer. If the result
-\ would overflow the buffer it is quietly truncated. Unlike
-\ "." there is no trailing blank added and any unused bytes
-\ in the destination are left unchanged.
+\ supplied buffer. The buffer is set to blanks before the
+\ conversion. Returns string address and length of the result,
+\ which is left justified in buffer. The length is exact, so
+\ unlike "." there is no trailing blank in the length. If the
+\ result would overflow the buffer it is quietly truncated.
 
 : u>$ ( u c-addr u1 -- c-addr u2 )
+  2dup blank                     \ erase
   rot 0 <# #s #>                 \ u c-addr1 u1 c-addr2 u2
   swap >r min 2dup r> -rot       \ addr addr um
   move ;                         \
