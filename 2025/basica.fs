@@ -3,33 +3,6 @@
 BASE @
 DECIMAL
 
-\ Copy a string to the pad, mostly for testing.
-
-: >pad ( c-addr u -- , will abort if no room )
-  dup 84 > if ." No room in Pad for " .s drop 10 dump abort then
-  pad swap move ;
-
-
-\ Does one string begin or end with another.
-
-: begins$ {: beg blen str slen | -- flag :}
-  blen slen <= if beg blen str blen compare 0=
-               else false then ;
-
-: ends$ {: end elen str slen | -- flag :}
-  elen slen <= if end elen str slen + elen - elen compare 0=
-             else false then ;
-
-\ advance to next string position, length of 0 means empty
-
-: nextpos$ ( c-addr u -- c-addr+1 u-1 , 0 if can't advance )
-  dup if 1- swap 1+ swap then ;
-
-\ advance to prior string position, no range checking
-
-: priorpos$ ( c-addr u -- c-addr-1 u+1 , no range checks )
-  1+ swap 1- swap ;
-
 
 \ Some string functions and procedures from the old BASIC days.
 \

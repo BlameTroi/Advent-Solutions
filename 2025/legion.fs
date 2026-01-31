@@ -6,14 +6,36 @@
 \ at keeping related definitions in close proximity, but I
 \ know it won't be perfect.
 
+
+\ What and Why ===============================================
+\
+\ I have two idea sources for this "library."
+\
+\ * As I go through Advent of Code I look for definitions that
+\   can be reused.
+\ * I have a lot of Basic and Pascal habits built up over the
+\   years (ok, decades). I'm implementing some of the functions
+\   and procedures I found useful.
+\
+\ Any "original" definitions for Advent of Code will adhere to
+\ Forth conventions to the extent I understand them. Naming is
+\ still evolving.
+\
+\ Any Basicisms will follow the Microsft Basic language from
+\ the 1970s and 1980s. I'm using PC-BASIC as my reference.
+\
+\ Any Pascalisms will be pre-Object Pascal.
+
+
+\ Unit Testing ===============================================
 \ The Hayes based ttester.fs exists in several places on the
 \ internet and a version is supplied with gforth. To include
-\ and run the tests, set the constant INCLUDE-TESTS to true.
+\ and run the tests, set the constant LEGION-TESTS to true.
 \
 \ Words controlling code inclusion will be in UPPER case.
 \
-\ good: INCLUDE-TESTS [IF] test code block [THEN]
-\  bad: include-tests [if] test code block [then]
+\ good: LEGION-TESTS [IF] test code block [THEN]
+\  bad: LEGION-TESTS [if] test code block [then]
 \
 \ The token >G at the start of a line comment is used to
 \ identify comments used to build a glossary. The format is
@@ -22,7 +44,7 @@
 \
 \  "\ >G WORD ( in -- out ) \ and maybe other text too".
 \
-\ >G must is case sensitive.
+\ >G is case sensitive.
 \
 \ I know that gforth has \G for documentation generation but
 \ I may want to do things that \G doesn't support.
@@ -31,30 +53,44 @@
 \ definition but otherwise my code is usually lower case.
 \
 \ TODO: blocks? mini-glossary and a fuller "dictionary"?
-
+\
+\ Other conventions:
+\
+\ * I refer to a c-addr u pair as a string when appropriate.
+\ * Definition names in () are to be considered private.
+\ * Local variables using {: args | values -- results :} are
+\   allowed but are to be avoided when possible.
+\ * I strive to keep code line length limited to 64 characters
+\   as that is the old blocks convention. This is a guidance
+\   and not a hard rule.
 
 \ (c) 2026 Troy Brumley
 \ All my stuff is public domain via the unlicense, or if you
 \ don't like that you can choose the MIT license.
 
-FALSE CONSTANT INCLUDE-TESTS
+TRUE CONSTANT LEGION-TESTS      \ CHANGE ME AS NEEDED*********
 
-INCLUDE-TESTS [IF]
+LEGION-TESTS [IF]
   require test/ttester.fs
 [THEN]
 
 
 \ Some globals for testing.
-INCLUDE-TESTS [IF]
+LEGION-TESTS [IF]
   create blanks 128 allot
   blanks 128 bl fill
 [THEN]
 
 
-\ Very minor definitions and types. These are mostly untested
-\ as they are usually "intuitively obvious." I sometimes write
-\ wrappers for standard words that I always invoke a certain
-\ way.
+\ The Really Small Stuff =====================================
+\
+\ These are minor definitions and types. These don't generally
+\ have unit tests. They are small, "intuitively obvious", and
+\ exercised by later defintions that are unit tested.
+\
+\ I also create wrappers for some standard words where the
+\ preamble stack set up rarely or never changes.
+
 
 \ A character string with a maximum length and placed on the
 \ stack as c-addr u. The string is initialized to blanks.
@@ -113,6 +149,7 @@ INCLUDE-TESTS [IF]
 : STRING$ ( c-addr u n c -- c-addr u2 )
   >r min 2dup r> fill ;
 
+
 \ \G BEGINS$ ( c-addr1 u1 c-addr2 u2 -- flag )
 \ Does 1 occupy the leftmost part of 2?
 
@@ -121,20 +158,40 @@ INCLUDE-TESTS [IF]
   blen slen <= if beg blen str blen compare 0=
                else false then ;
 
-\ \G BEGINS$ ( c-addr1 u1 c-addr2 u2 -- flag )
+LEGION-TESTS [IF]
+  cr ." Testing BEGINS$..."
+  T{ s" 123" s" 123456789" BEGINS$ -> true }T
+  T{ s" 456" s" 123456789" BEGINS$ -> false }T
+  T{ s" 789" s" 123456789" BEGINS$ -> false }T
+  cr
+[THEN]
+
+
+\ \G ENDS$ ( c-addr1 u1 c-addr2 u2 -- flag )
 \ Does 1 occupy the rightmost part of 2?
 
-: ends$ ( c-adr1 u1 c-addr2 u2 -- flag )
+: ENDS$ ( c-adr1 u1 c-addr2 u2 -- flag )
   {: end elen str slen | -- flag :}
   elen slen <= if end elen str slen + elen - elen compare 0=
              else false then ;
+LEGION-TESTS [IF]
+  cr ." Testing ENDS$..."
+  T{ s" 123" s" 123456789" ENDS$ -> false }T
+  T{ s" 456" s" 123456789" ENDS$ -> false }T
+  T{ s" 789" s" 123456789" ENDS$ -> true }T
+  cr
+[THEN]
 
-
-\ I have a lot of Basic and Pascal habits built up over the
-\ years. Here are string manipulation definitions that follow
+\ Explicitly Basic Definitions ===============================
+\
+\ Here are string manipulation definitions that follow
 \ Microsoft's PC era BASICA. In that parlance, a statement is
 \ a modifier or l-value, while a function is r-values.
-
+\
+\ Statement: LSET some string$ = some string expression
+\
+\ Function:  INSTR(string to find, string to search)
+\
 \ Statements  Description
 \
 \ LSET        Copy a left-justified value into a string buffer
@@ -162,7 +219,7 @@ INCLUDE-TESTS [IF]
   2dup blank
   rot min move ;
 
-INCLUDE-TESTS [IF]
+LEGION-TESTS [IF]
   cr ." Running LSET tests..."
   \ smaller to larger
   T{ pad 84 erase                      ( nuls to test blank pad )
@@ -181,11 +238,8 @@ INCLUDE-TESTS [IF]
 [THEN]
 
 
-
-
-
-
-\ >G MSET ( c-addr1 u1 c-addr2 u2 u3 -- ) copy and fit from 1 to 2+u2 for u3 bytes
+\ >G MSET ( c-addr1 u1 c-addr2 u2 u3 -- )
+\ Copy 1 into 2+u3, watching for overflows.
 \
 \ In Basic this is MID$ as an l-value. I've kept the MID$ name
 \ for the r-value form and renamed this.
@@ -200,11 +254,8 @@ INCLUDE-TESTS [IF]
   droom slen min to actlen
   sub dst dpos + actlen move ;
 
-\ MSET (statement form of MID$) ( c-addr1 u1 c-addr2 u2 u3 )
-\ Copy 1 into 2+u3, watching for overflows.
-
-INCLUDE-TESTS [IF]
-cr ." Running MSET tests..."
+LEGION-TESTS [IF]
+  cr ." Running MSET tests..."
   \ 5 bytes from a 6 byte string into 10 byte string + 5
   T{ pad 84 erase
      s" 0123456789" >pad
@@ -224,25 +275,27 @@ cr ." Running MSET tests..."
    cr
 [THEN]
 
-\ >G RSET ( c-addr1 u1 c-addr2 u2 -- ) right justify 1 inoto 2 padding with blanks
+
+\ >G RSET ( c-addr1 u1 c-addr2 u2 -- )
+\ right justify 1 inoto 2 padding with blanks
 \
 \ Copies a string1 to string2 right justified with leading
 \ blanks if string1 is shorter than string2. If string1 is
 \ longer than string2, it is quietly truncated.
 
-\ Exact fit helper.
+\ Private helpers for length relationships:
+\ source <=> destination.
+
 : (RSET-equal) ( src slen dst dlen -- )
   drop swap move ;
-
-\ Source shorter than destination helper.
 : (RSET-less) ( c-addr1 u1 cc-addr2 u2 -- )
   {: src slen dst dlen -- :}
   dst dlen + slen - to dst
   src dst slen move ;
-
-\ Source longer than destination helper.
 : (RSET-more) {: src slen dst dlen -- :}
   src slen + dlen - dst dlen move ;
+
+\ The callable RSET.
 
 : RSET ( c-addr1 u1 c-addr2 u2 -- )
   {: src slen dst dlen -- :}
@@ -252,7 +305,7 @@ cr ." Running MSET tests..."
   slen dlen < if (RSET-less) else
                  (RSET-MORE) then then ;
 
-INCLUDE-TESTS [IF]
+LEGION-TESTS [IF]
   cr ." TODO replace fills with STRING$ below."
   cr ." Running RSET tests..."
   \ Overlay tail with 7 bytes. Proves that RSET blank pads.
@@ -286,11 +339,7 @@ INCLUDE-TESTS [IF]
 [THEN]
 
 
-\ Functions:
-
-
 \ >G INSTR ( c-addr1 u1 c-addr2 u2 -- u3 )
-\
 \ Return the offset of 1 in 2. If the string is not found
 \ return -1.
 \
@@ -311,9 +360,19 @@ INCLUDE-TESTS [IF]
     drop -1
   then ;
 
+LEGION-TESTS [IF]
+  cr ." Testing INSTR..."
+  T{ s" 124" s" 012345" INSTR -> -1 }T   ( not found )
+  T{ s" 123" s" 012345" INSTR -> 1 }T    ( found @ 1 )
+  T{ s" 012" s" 012345" INSTR -> 0 }T    ( found @ 0 )
+  T{ s" 013" s" 012345" INSTR -> -1 }T   ( not found )
+  T{ s" 123" s" 12"     INSTR -> -1 }T   ( fails target short )
+  T{ s" 45"  s" 012345" INSTR -> 4 }T    ( check tail boundary )
+  T{ s" 5"   s" 012345" INSTR -> 5 }T
+  cr
+[THEN]
 
 \ >G LEFT$  ( c-addr1 u1 u2 c-addr3 u3 -- c-addr4 u4 )
-\
 \ Return the leftmost u2 characters of 1 in 2 as 4.
 \
 \ If n is zero or from_str is empty, LEFT$ returns an empty string.
@@ -326,17 +385,33 @@ INCLUDE-TESTS [IF]
   slen n < if str dstr slen move dstr slen exit then \ TODO: think about this one
   str dstr n dlen min move dstr n dlen min ;
 
+LEGION-TESTS [IF]
+  cr ." Testing LEFT$..."
+  T{ pad 84 erase   ( truncate in destination )
+     s" 0123456789" ( source string )
+     dup            ( use its entire length )
+     pad 84         ( and place it in a larger string )
+     LEFT$
+     -> pad s" 0123456789" swap drop }T \ pad l'source
+  T{ pad 84 erase     ( source smaller than destination )
+     s" 0123456789" dup      ( source length, length to use )
+     pad over 2/             ( destination is half the length of source )
+     LEFT$
+     s" 0123456789" 2/ compare
+     pad 5 + c@ -> 0 0 }T
+[THEN]
 
-\ >G LEN ( c-addr u -- u ) This is not really needed.
+
+\ >G LEN ( c-addr u -- u )
+\ String used length. Included for completeness but I don't
+\ test it and don't expect to use it. TODO: with or without
+\ -TRAILING?
 
 : LEN ( c-addr u -- u )
   swap drop ;
 
 
 \ >G MID$ ( c-addr1 u1 u2 u3 c-addr4 u4 -- c-addr5 u4 )
-\
-\  substring = MID$(string, position [, length])
-\
 \ Returns a substring of string starting at position, counting
 \ from 0 (u2) for length (u3). There is some range checking
 \ here.
@@ -359,15 +434,33 @@ INCLUDE-TESTS [IF]
   str spos + dstr sfor move
   dstr sfor ;
 
+LEGION-TESTS [IF]
+  cr ." Testing MID$..."
+  \ Some of these aren't realistic...checking edges.
+  T{ pad 84 erase            ( lengths equal )
+     s" 0123456789" 0 10 pad 10 MID$
+     s" 0123456789" compare -> 0 }T
+  \ zero length
+  T{ pad 84 erase            ( at least one length zero )
+     s" 0123456789" 0 0 pad 10 MID$
+     s" 0123456789" drop 0 compare -> 0 }T
+  T{ pad 84 erase            ( show's truncating output )
+     s" 0123456789" 0 3 pad 10 MID$
+     3 = swap pad = and
+     s" 0123456789" drop 3 pad 3 compare -> -1 0 }T
+   cr
+[THEN]
+
 
 \ >G RIGHT$ ( c-addr1 u1 u2 c-addr3 u3 -- c-addr4 u4 )
+\ Return the rightmost u2 characters of string 3.
 \
-\ Returns the rightmost u2 characgers from 1 in 3. The start of
+\ Returns the rightmost u2 characters from 1 in 3. The start of
 \ 4 is the same as 3. The length of 4 is the minimum of u1 and
 \ u2.
 \
-\ If num_chars is zero or parent is empty, RIGHT$ returns an empty string.
-\ If num_chars is greater than the length of parent, returns parent.
+\ If u2 is zero or parent is empty, returns an empty string.
+\ If u2 is greater than the length of parent, returns parent.
 
 : RIGHT$ ( c-addr1 u1 u2 c-addr3 u3 -- c-addr4 u4 )
   {: str slen n dst dlen -- dst u :}
@@ -376,6 +469,23 @@ INCLUDE-TESTS [IF]
   slen n < if str dst slen move dst slen exit then
   str slen + n - dst n move dst n ;
 
+LEGION-TESTS [IF]
+  cr ." Testing RIGHT$..."
+  T{ pad 84 erase            ( truncate if no room )
+     s" 0123456789" 10 pad 3 RIGHT$
+     s" 789" compare -> 0 }T
+  T{ pad 84 erase            ( empty if source length 0 )
+     s" 0123456789" drop 0 10 pad 10 RIGHT$
+     -> pad 0 }T
+  T{ pad 84 erase            ( empty if destination length 0 )
+     s" 0123456789" 0 pad 10 RIGHT$
+     -> pad 0 }T
+  T{ pad 84 erase            ( non edge case )
+     s" 0123456789" 5 pad 10 RIGHT$
+     2dup s" 56789" compare
+     -> pad 5 0 }T
+  cr
+[THEN]
 
 
 

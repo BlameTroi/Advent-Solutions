@@ -4,14 +4,8 @@ BASE @
 DECIMAL
 
 
-\ A character string with a maximum length and placed on the
-\ stack as c-addr u. The string is initialized to blanks.
-\
-\ TODO: alternate initializers.
-\ TODO: byte strings.
 
-: string$ create dup , here over blank allot
-          does> dup cell+ swap @ ;
+
 
 
 \ safe-move copies up to u2 characters from addr1 to addr2.
@@ -31,18 +25,6 @@ DECIMAL
 : s$>c$ ( c-addr1 u1 c-addr2 u2 -- )
    2dup erase  1- swap 1+ swap  rot min
    2dup swap 1- c!  move ;
-
-
-\ Fetch the next character from a string, returns 0 if length
-\ remaining < 1. This is meant to be part of an iterator over
-\ a string.
-
-: nextpos$ ( c-addr u -- c-addr+1 u-1 , 0 if can't advance )
-  dup if 1- swap 1+ swap then ;
-
-: c@-next$ ( c-addr u -- c-addr2 u2 c )
-  dup 1 < if 0 else over c@ -rot 1- swap 1+ swap rot then ;
-
 
 
 \ Find the location of character c in a standard string. The
@@ -72,6 +54,7 @@ DECIMAL
     str i + c@ dup chr > if to chr i to idx else drop then
   loop
   str idx + len idx - ( locate the character ) ;
+
 
 \ Append a character to a string. There are no overflow checks.
 
@@ -216,7 +199,6 @@ DECIMAL
 \ Find the first occurrence of character c in a string. Return
 \ an updated string pointer and a flag. If the string was not
 \ found the string poiner points just past the input string.
-
 
 : cin$ {: chr str len | idx flag -- str2 len2 flag :}
   false to flag len to idx
