@@ -63,7 +63,8 @@ DECIMAL
   r> drop ( discard char ) ;
 
 
-\ find largest in substring, adjust string pointer to after largest
+\ Find the largest character in a string, returning the string
+\ pointer on the largest found.
 
 : largest-char-in {: str len | chr idx -- str2 len2 :}
   str c@ to chr 0 to idx ( assume first is largest )
@@ -72,6 +73,16 @@ DECIMAL
   loop
   str idx + len idx - ( locate the character ) ;
 
+\ Append a character to a string. There are no overflow checks.
+
+\ this is the right general idea but I'm too fuzzy headed to
+\ get it right. Later.
+: cappend$ ( c c-addr u -- c-addr u+1 )
+  >r  ( c c-addr ; r: u )
+  swap over ( c-addr c c-addr ; r: u )
+  r@ + ( c-addr c c-addr2 ; r: u )
+  c! ( c-addr ; r: u )
+  r@ + r> ; ( c-addr u2 )
 
 \ Iterate over the characters in a string and perform some
 \ test.

@@ -81,6 +81,24 @@ variable part-one  variable part-two
   -1 +loop
   -rot 2drop ;
 
+\ Find the largest possible n digits from an m digit string,
+\ where the digit order must be preserved. So:
+\
+\ 9
+\ 234234234234278    (note a 2 3 and 2 near start are off)
+\ 434234234278
+\ n = 12, m = 15
+\ so the last 11 digits of m can not be scanned on first pass
+\
+\ 2342...........
+\   4234234234278
+\ n = 11, m = 12
+\ so the last 10 diigts of m can not be scanned on second pass
+\   43...........
+\   434234234278
+\ n = 10, m = 10 so we are done
+\
+
 
 \ pick the largest 12 digit number from however many digits
 \ there are in the order presented. This is a greedy selection
