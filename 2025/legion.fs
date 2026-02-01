@@ -1,15 +1,22 @@
 \ legion.fs -- consolidating my helpers -- T.Brumley
 
+\ "our name is legion for we are many"
+
+\ (c) 2026 Troy Brumley
+\ All my stuff is public domain via the unlicense, or if you
+\ don't like that you can choose the MIT license.
+
 \ Rather than struggle with finding the perfect grouping of
 \ definitions by use, I'm pulling everything into this one
-\ file and including my unit tests. There will be some attempt
-\ at keeping related definitions in close proximity, but I
-\ know it won't be perfect.
+\ file and including unit tests. There will be some attempt
+\ at keeping related definitions in close proximity, usually
+\ by what it is (predicate, converter) or wht it operates on
+\ (characters, strings, numbers).
 
 
 \ What and Why ===============================================
-\
-\ I have two idea sources for this "library."
+
+\ I have two idea sources for this library.
 \
 \ * As I go through Advent of Code I look for definitions that
 \   can be reused.
@@ -26,17 +33,8 @@
 \
 \ Any Pascalisms will be pre-Object Pascal.
 
+\ Style and Conventions: =====================================
 
-\ Unit Testing ===============================================
-\ The Hayes based ttester.fs exists in several places on the
-\ internet and a version is supplied with gforth. To include
-\ and run the tests, set the constant LEGION-TESTS to true.
-\
-\ Words controlling code inclusion will be in UPPER case.
-\
-\ good: LEGION-TESTS [IF] test code block [THEN]
-\  bad: LEGION-TESTS [if] test code block [then]
-\
 \ The token >G at the start of a line comment is used to
 \ identify comments used to build a glossary. The format is
 \ rather strict: a line comment at the start of the line
@@ -50,13 +48,15 @@
 \ I may want to do things that \G doesn't support.
 \
 \ Colon definition names should be in upper case in the
-\ definition but otherwise my code is usually lower case.
+\ definition and any mention of the definition in this file.
+\
+\ This is meant to improve readability.
 \
 \ TODO: blocks? mini-glossary and a fuller "dictionary"?
 \
 \ Other conventions:
 \
-\ * I refer to a c-addr u pair as a string when appropriate.
+\ * I refer to a c-addr u pair as a string or string pointr.
 \ * Definition names in () are to be considered private.
 \ * Local variables using {: args | values -- results :} are
 \   allowed but are to be avoided when possible.
@@ -64,11 +64,22 @@
 \   as that is the old blocks convention. This is a guidance
 \   and not a hard rule.
 
-\ (c) 2026 Troy Brumley
-\ All my stuff is public domain via the unlicense, or if you
-\ don't like that you can choose the MIT license.
 
-TRUE CONSTANT LEGION-TESTS      \ CHANGE ME AS NEEDED*********
+\ Unit Testing ===============================================
+
+\ The Hayes based ttester.fs exists in several places on the
+\ internet and a version is supplied with gforth. To include
+\ and run the tests, set the VALUE LEGION-TESTS to true.
+\
+\ Words controlling code inclusion will be in UPPER case.
+\
+\ good: LEGION-TESTS [IF] test code block [THEN]
+\  bad: LEGION-TESTS [if] test code block [then]
+\
+\ These are VALUEs instead of CONSTANTs so they be toggled in
+\ client code.
+
+TRUE VALUE LEGION-TESTS      \ CHANGE ME AS NEEDED*********
 
 LEGION-TESTS [IF]
   require test/ttester.fs
@@ -159,7 +170,7 @@ LEGION-TESTS [IF]
                else false then ;
 
 LEGION-TESTS [IF]
-  cr ." Testing BEGINS$..."
+  cr ." Running BEGINS$ tests..."
   T{ s" 123" s" 123456789" BEGINS$ -> true }T
   T{ s" 456" s" 123456789" BEGINS$ -> false }T
   T{ s" 789" s" 123456789" BEGINS$ -> false }T
@@ -167,7 +178,7 @@ LEGION-TESTS [IF]
 [THEN]
 
 
-\ \G ENDS$ ( c-addr1 u1 c-addr2 u2 -- flag )
+\ >G ENDS$ ( c-addr1 u1 c-addr2 u2 -- flag )
 \ Does 1 occupy the rightmost part of 2?
 
 : ENDS$ ( c-adr1 u1 c-addr2 u2 -- flag )
@@ -175,12 +186,182 @@ LEGION-TESTS [IF]
   elen slen <= if end elen str slen + elen - elen compare 0=
              else false then ;
 LEGION-TESTS [IF]
-  cr ." Testing ENDS$..."
+  cr ." Running ENDS$ tests..."
   T{ s" 123" s" 123456789" ENDS$ -> false }T
   T{ s" 456" s" 123456789" ENDS$ -> false }T
   T{ s" 789" s" 123456789" ENDS$ -> true }T
   cr
 [THEN]
+
+
+\ >G N-SUB4 ( c-addr u n - u/n flag )
+\ Can this string be split into equal sized chunks?
+
+: ?N-SUB$ ( c-addr u n -- un/ flag ) ( c-addr discarded )
+  rot drop /mod swap 0= ;
+
+
+\ Sometimes a repeating pattern in a string must be handled.
+\ This pair take a string and compare one piece of it to
+\ another. Given c-addr u this comparison is:
+\
+\ c-addr u c-addr+u u compare 0=
+
+
+\ >G ?ADJACENT$-EQUAL ( c-addr u -- flag )
+: ?ADJACENT$-EQUAL ( c-addr u -- flag )
+  2dup dup >r + r> compare 0= ;
+
+
+\ >G ?2-SUB$-EQUAL ( c-addr u -- flag )
+: ?2-SUB$-EQUAL ( c-addr u -- flag )
+    1 rshift  ?ADJACENT$-EQUAL ;
+
+
+
+\ String/Character Iterators =================================
+
+
+\ A general iterator for string predicates. c@-next$ updates
+\ the string pointer with each call. Returns false with the
+\ string pointer to the failing character or true with the
+\ string pointer pastt he end of the original string.
+
+\ >G ?ALL-SATISFY-PRED$ ( c-addr1 u1 xt -- c-addr2 u2 flag )
+\ Do the characters of a string satisfy a predicate (given as
+\ an execute token)?
+
+: ?ALL-SATISFY-PRED$ ( c-addr1 u1 xt -- c-addr2 u2 flag )
+  {: str len xt | result -- str2 len2 flag :}
+  str len true to result
+  dup 0 do
+    C@-NEXT$ xt execute 0=
+    if 1+ swap 1- swap false to result leave then
+  loop result ;
+
+
+\ >G ?ALL-SAME-CHAR$ ( c-addr1 u1 -- c-addr2 u2 flag )
+\ Are all of the characters in a string the same?
+\
+\ Returns false and the substring starting from mismatched
+\ character or true and the string pointer past the end of
+\ the original string.
+
+: ?ALL-SAME-CHAR$ ( c-addr1 u1 -- c-addr2 u2 flag )
+  {: str len | chr result -- str2 len2 flag :}
+  str len true to result
+  over c@ to chr
+  dup 0 do
+    C@-NEXT$ chr <>
+    if 1+ swap 1- swap false to result leave then
+  loop result ;
+
+
+\ >G ?N-SUB$-EQUAL ( c-addr u n -- flag )
+\ Are the n adjacent substrings starting at c-addr the same?
+
+: ?N-SUB$-EQUAL ( c-addr u n -- flag )
+  {: ( str len n ) | result -- flag :}
+  true to result
+  1 do ( n segments require n 1- compares, so start at 1 )
+    2dup 2dup + over
+    compare if false to result leave then
+    swap over + swap
+  loop
+  2drop result ;
+
+
+\ Obvious Predicates. ========================================
+
+
+\ Single character predicates and then full string versions
+\ using ?ALL-SATISFY-PRED$.
+\
+\ For the string version the string pointer is updated
+\ as in ?ALL-SATISFY-PRED$.
+
+
+\ >G ?DIGIT ( c -- f )
+: ?DIGIT ( c -- f )  48 58 within ;
+
+\ >G ?ISLOWER ( c -- f )
+: ?LOWER ( c -- f )  97 123 within ;
+
+\ >G ?ISUPPER ( c -- f )
+: ?UPPER ( c -- f )  65 91 within ;
+
+\ >G ?WHITE ( c -- f )
+: ?WHITE ( c -- f ) dup 8 14 within swap 32 = or ;
+
+\ >G ?ALPHA ( c -- f )
+: ?ALPHA ( c -- f ) dup ?LOWER swap ?UPPER or ;
+
+\ >G ?ALPHANUM ( c -- f )
+: ?ALPHANUM ( c -- f ) dup ?DIGIT swap ?ALPHA or ;
+
+
+\ >G ?DIGIT$ ( c-addr u -- c-addr2 u2 f )
+: ?DIGIT$ ['] ?DIGIT ?ALL-SATISFY-PRED$ ;
+
+\ >G ?LOWER$ ( c-addr u -- c-addr2 u2 f )
+: ?LOWER$ ['] ?LOWER ?ALL-SATISFY-PRED$ ;
+
+\ >G ?UPPER$ ( c-addr u -- c-addr2 u2 f )
+: ?UPPER$ ['] ?UPPER ?ALL-SATISFY-PRED$ ;
+
+\ >G ?ALPHA$ ( c-addr u -- c-addr2 u2 f )
+: ?ALPHA$ ['] ?ALPHA ?ALL-SATISFY-PRED$ ;
+
+\ >G ?ALPHANUM$ ( c -- f )
+: ?ALPHANUM$ ['] ?ALPHANUM ?ALL-SATISFY-PRED$ ;
+
+
+\ Obvious Converters. ========================================
+
+\ Several common character converters. These naturally factor
+\ into three definitions per conversion. From most to least
+\ priitive:
+\
+\ * A single character converter C>SOMETHING.
+\ * A single character converter at a position in a string
+\   C>SOMETHING$.
+\ * A convert the whole string using the prior two definitions
+\   S>SOMETHING$.
+
+
+\ >G C>UPPER ( c -- C )
+: C>UPPER ( c -- C )  dup ?LOWER if 32 - then ;
+
+\ >G C>LOWER ( C -- c )
+: C>LOWER ( C -- c )  dup ?UPPER if 32 + then ;
+
+
+\ For the character in string definitions, the string pointer
+\ is advanced. The flag becomes false once the string is
+\ consumed.
+
+\ >G C>UPPER$ ( c-addr u -- c-addr+1 u-1 flag )
+: C>UPPER$ ( c-addr u -- c-addr+1 u-1 flag )
+  dup 0< if false else
+  over dup c@ C>UPPER swap c! 1- swap 1+ swap true then ;
+
+\ >G C>LOWER$ ( c-addr u -- c-addr+1 u-1 flag )
+: C>LOWER$ ( c-addr u -- c-addr+1 u-1 flag )
+  dup 0< if false else
+  over dup c@ C>LOWER swap c! 1- swap 1+ swap true then ;
+
+
+\ The string definitions pass each character to the appropriate
+\ s>$ converters.
+
+\ >G S>UPPER$ ( c-addr u -- )
+: s>upper$ ( c-addr u -- )
+  begin C>UPPER$ 0= until 2drop ;
+
+\ >G S>LOWER$ ( c-addr u -- )
+: S>LOWER$ ( c-addr u -- )
+  begin C>LOWER$ 0= until 2drop ;
+
 
 \ Explicitly Basic Definitions ===============================
 \
@@ -286,13 +467,16 @@ LEGION-TESTS [IF]
 \ Private helpers for length relationships:
 \ source <=> destination.
 
-: (RSET-equal) ( src slen dst dlen -- )
+: (RSET-equal) ( c-addr1 u1 c-addr2 u2 -- )
   drop swap move ;
-: (RSET-less) ( c-addr1 u1 cc-addr2 u2 -- )
+
+: (RSET-less) ( c-addr1 u1 c-addr2 u2 -- )
   {: src slen dst dlen -- :}
   dst dlen + slen - to dst
   src dst slen move ;
-: (RSET-more) {: src slen dst dlen -- :}
+
+: (RSET-more) ( c-addr1 u1 c-addr2 u2 -- )
+  {: src slen dst dlen -- :}
   src slen + dlen - dst dlen move ;
 
 \ The callable RSET.
@@ -306,7 +490,6 @@ LEGION-TESTS [IF]
                  (RSET-MORE) then then ;
 
 LEGION-TESTS [IF]
-  cr ." TODO replace fills with STRING$ below."
   cr ." Running RSET tests..."
   \ Overlay tail with 7 bytes. Proves that RSET blank pads.
   T{ pad 84 erase
@@ -361,7 +544,7 @@ LEGION-TESTS [IF]
   then ;
 
 LEGION-TESTS [IF]
-  cr ." Testing INSTR..."
+  cr ." Running INSTR tests..."
   T{ s" 124" s" 012345" INSTR -> -1 }T   ( not found )
   T{ s" 123" s" 012345" INSTR -> 1 }T    ( found @ 1 )
   T{ s" 012" s" 012345" INSTR -> 0 }T    ( found @ 0 )
@@ -371,6 +554,7 @@ LEGION-TESTS [IF]
   T{ s" 5"   s" 012345" INSTR -> 5 }T
   cr
 [THEN]
+
 
 \ >G LEFT$  ( c-addr1 u1 u2 c-addr3 u3 -- c-addr4 u4 )
 \ Return the leftmost u2 characters of 1 in 2 as 4.
@@ -386,7 +570,7 @@ LEGION-TESTS [IF]
   str dstr n dlen min move dstr n dlen min ;
 
 LEGION-TESTS [IF]
-  cr ." Testing LEFT$..."
+  cr ." Running LEFT$ tests..."
   T{ pad 84 erase   ( truncate in destination )
      s" 0123456789" ( source string )
      dup            ( use its entire length )
@@ -399,6 +583,7 @@ LEGION-TESTS [IF]
      LEFT$
      s" 0123456789" 2/ compare
      pad 5 + c@ -> 0 0 }T
+  cr
 [THEN]
 
 
@@ -412,9 +597,8 @@ LEGION-TESTS [IF]
 
 
 \ >G MID$ ( c-addr1 u1 u2 u3 c-addr4 u4 -- c-addr5 u4 )
-\ Returns a substring of string starting at position, counting
-\ from 0 (u2) for length (u3). There is some range checking
-\ here.
+\ Return a substring of string starting at position, counting
+\ from 0 (u2) for length (u3).
 \
 \ This could create a new string but I'm not messing with an
 \ allocator yet. It returns a string pointer of
@@ -435,7 +619,7 @@ LEGION-TESTS [IF]
   dstr sfor ;
 
 LEGION-TESTS [IF]
-  cr ." Testing MID$..."
+  cr ." Running MID$ tests..."
   \ Some of these aren't realistic...checking edges.
   T{ pad 84 erase            ( lengths equal )
      s" 0123456789" 0 10 pad 10 MID$
@@ -470,7 +654,7 @@ LEGION-TESTS [IF]
   str slen + n - dst n move dst n ;
 
 LEGION-TESTS [IF]
-  cr ." Testing RIGHT$..."
+  cr ." Running RIGHT$ tests..."
   T{ pad 84 erase            ( truncate if no room )
      s" 0123456789" 10 pad 3 RIGHT$
      s" 789" compare -> 0 }T
@@ -488,6 +672,107 @@ LEGION-TESTS [IF]
 [THEN]
 
 
+\ Converters =================================================
+
+\ Copy a string to a counted string. Will not overflow the
+\ allowed length of the counted string (u2).
+
+: S$>C$ ( c-addr1 u1 c-addr2 u2 -- )
+   2dup erase  1- swap 1+ swap  rot min
+   2dup swap 1- c!  move ;
+
+\ >G U>$ ( u c-addr u1 -- c-addr u2 )
+\ Convert an unsigned single to a string and save it in the
+\ supplied buffer. The buffer is set to blanks before the
+\ conversion. Returns string address and length of the result,
+\ which is left justified in buffer. The length is exact, so
+\ there is no trailing blank in the length.
+\
+\ A buffer overflow is silently truncated.
+
+: U>$ ( u c-addr u1 -- c-addr u2 )
+  2dup blank                     \ erase
+  rot 0 <# #s #>                 \ u c-addr1 u1 c-addr2 u2
+  swap >r min 2dup r> -rot       \ addr addr um
+  move ;                         \
+
+
+\ General String Definitions =================================
+
+\ >G SAFE-MOVE$ ( c-addr1 u1 c-addr2 u2 -- )
+\ safe-move copies up to u2 characters from addr1 to addr2.
+\ If u1 < u2, only u1 characters are copied. If u2 > u1, only
+\ u1 characters are copied and the remaining portion at addr2
+\ is left unchanged.
+
+: SAFE-MOVE$ ( c-addr1 u1 c-addr2 u2 -- )
+  {: str1 len1 str2 len2 -- :}
+  len1 len2 min str1 swap str2 over move ;
+
+
+\ Finders: ===================================================
+
+\ >G CPOSIN$ ( c-caddr1 u1 -- c-addr1+? u1-? )
+\ Find the location of character c in a standard string. The
+\ return is a string starting from that character. If the
+\ character is not found, a string of length 0 is returned.
+\
+\ For repeated calls forward through a string the caller must
+\ adjust the string.
+\
+\ '9' ." 9823" CPOSIN$ '8' -rot 1- swap 1+ swap CPOSIN$
+
+\ TODO: Pick one of CPOSIN$ and CIN$, use name CIN$.
+
+: CPOSIN$ ( c c-addr u -- c-addr2 u2 , c-addr+u 0 if not found )
+  rot >r  ( stash char ) 1+ swap 1- swap ( fix up for start )
+  begin
+    1- swap 1+ swap                   ( adjust )
+    2dup 0= if drop true else c@ r@ = then ( match? )
+  until
+  r> drop ( discard char ) ;
+
+
+\ >G CIN$ ( c c-addr1 u1 -- c-addr2 u2 flag )
+\ Find the first occurrence of character c in a string.
+\
+\ If not found, flag is false and the string pointer is past
+\ the end of the original string. If found, flag is true and
+\ the string pointer is positioned on that character.
+
+: CIN$ ( c c-addr1 u1 -- c-addr2 u2 flag )
+  {: chr str len | idx flag -- str2 len2 flag :}
+  false to flag len to idx
+  str len 0 do
+    dup i + c@ chr = if i to idx true to flag leave then
+  loop
+  idx + len idx - flag ;
+
+
+\ >G LARGEST-CHAR-IN ( c-addr1 u1 -- c-addr1+? u1-? )
+\ Find the largest character in a string, returning the string
+\ pointer on the largest found.
+
+: LARGEST-CHAR-IN ( c-addr1 u1 -- c-addr1+? u1-? )
+  {: str len | chr idx -- str2 len2 :}
+  str c@ to chr 0 to idx ( assume first is largest )
+  len 1 do
+    str i + c@ dup chr > if to chr i to idx else drop then
+  loop
+  str idx + len idx - ( locate the character ) ;
+
+
+\ >G CAPPEND$ ( c c-addr u -- c-addr u+1 )
+\ Append a character to a string. There are no overflow checks.
+
+\ TODO: Can I do this better?
+
+: CAPPEND$ ( c c-addr u -- c-addr u+1 )
+  >r  ( c c-addr ; r: u )
+  swap over ( c-addr c c-addr ; r: u )
+  r@ + ( c-addr c c-addr2 ; r: u )
+  c! ( c-addr ; r: u )
+  r@ + r> ; ( c-addr u2 )
 
 
 
@@ -495,4 +780,42 @@ LEGION-TESTS [IF]
 
 
 
-\ End of basica.fs.
+
+\ Futures: ===================================================
+
+\ Common List Operations =====================================
+\
+\ As in SML or Scheme. Not impemented yet, this is more of a to
+\ do list.
+\
+\ In order to implement these I need to decide what constitutes
+\ a 'list' for these functions.
+\
+\ APPEND (given two lists, add all items in the second list to
+\ the end of the first list).
+\
+\ CONCATENATE (given a series of lists, combine all items in
+\ all lists into one flattened list);
+\
+\ FILTER (given a predicate and a list, return the list of all
+\ items for which predicate(item) is True);
+\
+\ LENGTH (given a list, return the total number of items within
+\ it);
+\
+\ MAP (given a function and a list, return the list of the
+\ results of applying function(item) on all items);
+\
+\ FOLDL (given a function, a list, and initial accumulator,
+\ fold (reduce) each item into the accumulator from the left);
+\
+\ FOLDR (given a function, a list, and an initial accumulator,
+\ fold (reduce) each item into the accumulator from the right);
+\
+\ REVERSE (given a list, return a list with all the original
+\ items, but in reversed order).
+
+
+
+
+\ End of legion.fs
