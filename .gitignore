@@ -11,3 +11,5 @@ keep.*
 # in go a mod file matters, but in fortran it's a compile and link artifact
 *.mod
 *.orig
+# QB64PE artifacts.
+*.command

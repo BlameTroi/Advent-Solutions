@@ -86,10 +86,24 @@ LEGION-TESTS [IF]
 [THEN]
 
 
-\ Some globals for testing.
+\ Some globals for testing. TODO: eliminate as many of these
+\ as possible *OR* group them with the tests that use them.
+
 LEGION-TESTS [IF]
   create blanks 128 allot
   blanks 128 bl fill
+  : SASDF s" asdf" ;       \ 4
+  : SQWERTY s" qwerty" ;   \ 5
+  : SIJKL s" IJKL" ;       \ 4
+  : SMIXED s" This is a mixed case sentence." ;
+  : SUPPER s" THIS IS A MIXED CASE SENTENCE." ;
+  : SLOWER s" this is a mixed case sentence." ;
+  : SALPHA s" all alphaBETIC" ;
+  : SNUMERIC s" 12345" ;
+  : SALPHANUMERIC s" The item costs 123 USD" ;
+  : S1234 s" 1234" ;
+  : S12345678 s" 12345678" ;
+  : S12341234 s" 12341234" ;
 [THEN]
 
 
@@ -122,6 +136,15 @@ LEGION-TESTS [IF]
     drop 32 dump throw   ( discard u, dump 32 bytes of string )
   then
   pad swap move ;
+
+
+\ >G BL>PAD ( -- )
+
+: BL>PAD pad 84 blank ;
+
+
+\ >G NUL>PAD ( -- )
+: NUL>PAD pad 84 erase ;
 
 
 \ >G NEXTPOS$ ( c-addr u -- c-addr+1 u-1 ) Iterate string bytes forward
@@ -161,7 +184,7 @@ LEGION-TESTS [IF]
   >r min 2dup r> fill ;
 
 
-\ \G BEGINS$ ( c-addr1 u1 c-addr2 u2 -- flag )
+\ >G BEGINS$ ( c-addr1 u1 c-addr2 u2 -- flag )
 \ Does 1 occupy the leftmost part of 2?
 
 : BEGINS$ ( c-addr1 u1 c-addr2 u2 -- flag )

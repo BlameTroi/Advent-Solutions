@@ -7,7 +7,9 @@ DECIMAL
 require ../io.fs
 require ../parsing.fs
 require ../strings.fs
+require ../basica.fs
 require ../stack.fs
+
 
 \ Problem: ----------------------------------------------------
 

@@ -7,23 +7,7 @@ DECIMAL
 
 \ Test data.
 
-: sasdf s" asdf" ;       \ 4
-: sqwerty s" qwerty" ;   \ 5
-: sIJKL s" IJKL" ;       \ 4
-: smixed s" This is a mixed case sentence." ;
-: supper s" THIS IS A MIXED CASE SENTENCE." ;
-: slower s" this is a mixed case sentence." ;
-: salpha s" all alphaBETIC" ;
-: snumeric s" 12345" ;
-: salphanumeric s" The item costs 123 USD" ;
-: s1234 s" 1234" ;
-: s12345678 s" 12345678" ;
-: s12341234 s" 12341234" ;
 
-\ Helpers.
-
-: bl-pad pad 84 blank ;
-: 00-pad pad 84 erase ;
 
 \ Types.
 
